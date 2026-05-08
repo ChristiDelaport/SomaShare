@@ -1,0 +1,176 @@
+﻿@page "/createlistings"
+@rendermode InteractiveServer
+@using SomaShare.Components.Model
+@using SomaShare.Services
+@using Microsoft.EntityFrameworkCore
+
+@inject IListingService ListingService
+@inject SomaContext Context
+@inject NavigationManager NavManager
+@inject UserSession session
+
+<PageTitle>Create Listing</PageTitle>
+
+<h3>Create New Listing</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p>@errorMessage</p>
+}
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <p>@successMessage</p>
+}
+
+<form @onsubmit="SubmitForm">
+
+    <h4>Textbook Info</h4>
+
+    <label>Title *</label>
+    <input @bind="textbook.Title" required />
+    <br />
+
+    <label>Author *</label>
+    <input @bind="textbook.Author" required />
+    <br />
+
+    <label>ISBN</label>
+    <input @bind="textbook.ISBN" />
+    <br />
+
+    <label>Edition/Version</label>
+    <input @bind="textbook.Version" />
+    <br />
+
+    <label>Genre *</label>
+    <select @bind="textbook.Genre_ID" required>
+        <option value="">-- Select Genre --</option>
+        @foreach (var genre in genres)
+        {
+            <option value="@genre.Genre_ID">@genre.Genre_Name</option>
+        }
+    </select>
+    <br />
+
+    <label>Description</label>
+    <textarea @bind="textbook.Description"></textarea>
+    <br />
+
+    <h4>Listing Details</h4>
+
+    <label>Price *</label>
+    <input type="number" step="0.01" @bind="listing.Price" required />
+    <br />
+
+    <label>Condition *</label>
+    <select @bind="listing.Condition" required>
+        <option value="">-- Select Condition --</option>
+        <option>Like New</option>
+        <option>Good</option>
+        <option>Fair</option>
+        <option>Poor</option>
+    </select>
+    <br />
+
+    <label>Campus Location</label>
+    <input @bind="listing.CampusLocation" />
+    <br />
+
+    <br />
+
+    <button type="button" @onclick="Cancel">Cancel</button>
+    <button type="submit" disabled="@isSubmitting">
+        @(isSubmitting ? "Creating..." : "Create Listing")
+    </button>
+
+</form>
+
+@code {
+    private Textbook textbook = new();
+    private ListingAd listing = new();
+    private List<Genre> genres = new();
+
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if user is logged in
+        if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 2 && session.CurrentUserRoleId != 1) // Ensure user is a seller or Admin
+        {
+            NavManager.NavigateTo("/");
+            return;
+        }
+
+        genres = await Context.Genres.ToListAsync();
+
+
+    }
+
+
+    private async Task SubmitForm()
+    {
+        try
+        {
+            isSubmitting = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(textbook.Title))
+            {
+                errorMessage = "Title is required";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(textbook.Author))
+            {
+                errorMessage = "Author is required";
+                return;
+            }
+
+            if (textbook.Genre_ID == 0)
+            {
+                errorMessage = "Please select a genre";
+                return;
+            }
+
+            if (listing.Price <= 0)
+            {
+                errorMessage = "Price must be greater than $0.00";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(listing.Condition))
+            {
+                errorMessage = "Please select a condition";
+                return;
+            }
+
+            listing.User_ID = session.CurrentUser.Id;
+            listing.Genre_ID = textbook.Genre_ID;
+            listing.Date_Posted = DateTime.UtcNow;
+            listing.IsActive = true;
+
+            await ListingService.CreateListingAsync(textbook, listing);
+
+            successMessage = "Listing created successfully!";
+            await Task.Delay(1500);
+            NavManager.NavigateTo("/managelistings");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating listing: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        NavManager.NavigateTo("/managelistings");
+    }
+}

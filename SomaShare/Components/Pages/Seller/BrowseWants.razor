@@ -1,0 +1,201 @@
+﻿@page "/browsewants"
+@rendermode InteractiveServer
+@using SomaShare.Components.Model
+@using SomaShare.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.EntityFrameworkCore
+
+@inject IWantedAdService WantedAdService
+@inject SomaContext Context
+@inject NavigationManager NavManager
+@inject UserSession session
+@inject IListingService ListingService
+@inject ISearchService SearchService
+
+<PageTitle>Browse Wanted Ads - SomaShare</PageTitle>
+
+<div>
+    <h2>Wanted Ads from Buyers</h2>
+    <p>See what textbooks buyers are looking for and post your listings!</p>
+
+    <div>
+        <div >
+            <h5 >Search & Filter</h5>
+        </div>
+        <div class="card-body">
+                <div >
+                    <label>Book Title or Author</label>
+                    <input type="text" id="searchTitle" placeholder="Search..." @bind="searchTitle" @bind:event="oninput" />
+                </div>
+                <div >
+                    <label for="genre" >Genre</label>
+                    <select id="genre" @bind="selectedGenre">
+                        <option value="">All Genres</option>
+                        @foreach (var genre in genres)
+                        {
+                            <option value="@genre.Genre_ID">@genre.Genre_Name</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label>&nbsp;</label>
+                    <div>
+                        <button class="btn btn-primary" @onclick="Search"> Search </button>
+                        <button class="btn btn-secondary" @onclick="ClearFilters">Clear</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (loading)
+    {
+    }
+    else if (wantedAds == null || wantedAds.Count == 0)
+    {
+        <div >
+            <h4>No Wanted Ads Found</h4>
+            <p>There are currently no wanted ads matching your search.</p>
+        </div>
+    }
+    else
+    {
+        <div>
+            @foreach (var wantedAd in wantedAds)
+            {
+ 
+                <div >
+                  <h5>@wantedAd.Textbook.Title</h5>
+                  <p>by @wantedAd.Textbook.Author</p>
+                </div>
+
+                <div class="card-body">
+                   <div>
+                        @if (!string.IsNullOrEmpty(wantedAd.Textbook.ISBN))
+                        {
+                            <p><strong>ISBN:</strong> @wantedAd.Textbook.ISBN </p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(wantedAd.Textbook.Version))
+                        {
+                          <p>
+                           <strong>Edition:</strong> @wantedAd.Textbook.Version
+                          </p>
+                                }
+
+                        <p> <strong> Genre:</strong> @wantedAd.Genre?.Genre_Name </p>
+
+                        <p> <strong>Posted:</strong> @wantedAd.Date_Posted.ToString("MMM dd, yyyy") </p>
+                    </div>
+
+                    <div>
+                       <p> <strong>Buyer:</strong> @wantedAd.User?.First_Name @wantedAd.User?.Last_Name </p>
+                   </div>
+
+                      @if (wantedAd.MaxPrice.HasValue && wantedAd.MaxPrice > 0)
+                       {
+                         <div >
+                         <p><strong>Max Price:</strong> $@wantedAd.MaxPrice.Value.ToString("F2")</p>
+                                </div>
+                            }
+                            else
+                            {
+                                <div >
+                                    <p><strong>Max Price:</strong> <em>Negotiable</em></p>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(wantedAd.Description))
+                            {
+                                <div>
+                                    <p><strong>Details:</strong></p>
+                                    <p>
+                                        @if (wantedAd.Description.Length > 100)
+                                        {
+                                            <text>@wantedAd.Description.Substring(0, 100)...</text>
+                                        }
+                                        else
+                                        {
+                                            <text>@wantedAd.Description</text>
+                                        }
+                                    </p>
+                                </div>
+                            }
+                        </div>
+
+            }
+        </div>
+    }
+
+@code {
+    private List<WantedAd> wantedAds;
+    private List<Genre> genres = new();
+    private string searchTitle = string.Empty;
+    private string selectedGenre = string.Empty;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Check if user is logged in
+            if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 2 && session.CurrentUserRoleId != 1) // Ensure user is a seller or Admin
+            {
+                NavManager.NavigateTo("/");
+                return;
+            }
+
+            // Load genres
+            genres = await Context.Genres.ToListAsync();
+
+            // Load all active wanted ads
+            await LoadWantedAds();
+        }
+        catch (Exception ex)
+        {
+            // Handle error silently for now
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task LoadWantedAds()
+    {
+        try
+        {
+            wantedAds = await WantedAdService.GetActiveBrowseableWantedAdsAsync(session.CurrentUser.Id);
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+        }
+    }
+
+    private async Task Search()
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(searchTitle) || !string.IsNullOrWhiteSpace(selectedGenre))
+            {
+                wantedAds = await WantedAdService.GetFilteredWantedAdsAsync(searchTitle, selectedGenre, session.CurrentUser.Id);
+            }
+            else
+            {
+                await LoadWantedAds();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+        }
+    }
+
+    private void ClearFilters()
+    {
+        searchTitle = string.Empty;
+        selectedGenre = string.Empty;
+    }
+
+ }

@@ -1,0 +1,287 @@
+﻿@page "/leave-review/{transactionId:int}"
+@rendermode InteractiveServer
+@using SomaShare.Components.Model
+@using SomaShare.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.EntityFrameworkCore
+
+@inject IReviewService ReviewService
+@inject SomaContext Context
+@inject NavigationManager NavManager
+@inject UserSession session
+
+<PageTitle>Leave Review - SomaShare</PageTitle>
+
+
+  
+            @if (loading)
+            {
+            }
+            else if (transaction == null)
+            {
+                <div >
+                    <h4>Transaction Not Found</h4>
+                    <p>This transaction does not exist or you don't have permission to review it.</p>
+                    <button class="btn btn-primary" @onclick="GoBack">Go Back</button>
+                </div>
+            }
+            else if (hasAlreadyReviewed)
+            {
+                <div>
+                    <h4>Already Reviewed</h4>
+                    <p>You have already left a review for this transaction.</p>
+                    <button class="btn btn-primary" @onclick="GoBack">Go Back</button>
+                </div>
+            }
+            else
+            {
+          
+                <h3>Leave a Review</h3>
+          
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div role="alert">
+                        @errorMessage
+                        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div role="alert">
+                        @successMessage
+                        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+                    </div>
+                }
+
+                <!-- Transaction Details -->
+               <div >
+                    <div >
+                        <h5>Transaction Details</h5>
+                        <p><strong>Transaction ID:</strong> @transaction.Transaction_Id</p>
+                        <p><strong>Amount:</strong> $@transaction.Transaction_Amount.ToString("F2")</p>
+                        <p><strong>Date:</strong> @transaction.Date_Created.ToString("MMM dd, yyyy")</p>
+                    </div>
+                    <div>
+                        <h5>Reviewing</h5>
+                        <p>
+                            <strong>Name:</strong> @reviewee?.First_Name @reviewee?.Last_Name<br />
+                            <strong>Role:</strong> @(transaction.Seller_Id == reviewee?.Id ? "Seller" : "Buyer")
+                        </p>
+                    </div>
+               </div>
+
+                        <!-- Review Form -->
+            <form @onsubmit="SubmitReview">
+            
+                    <label ><strong>Rating *</strong></label>
+                    <div>
+                        <div role="group">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                int rating = i;
+                                <input type="radio" name="rating" id="rating@i"
+                                       value="@i" @onchange="@((ChangeEventArgs e) => selectedRating = int.Parse(e.Value.ToString()))"
+                                       required />
+                            }
+                        </div>
+                    </div>
+                    <p>
+                        @if (selectedRating > 0)
+                        {
+                            <text>You selected: @RatingText(selectedRating)</text>
+                        }
+                        else
+                        {
+                            <text>Click to rate (1 = Poor, 5 = Excellent)</text>
+                        }
+                    </p>
+                 <div>
+                    <textarea id="comment" placeholder="Share your experience with this transaction..." @bind="review.Comment" maxlength="500"></textarea>
+                
+                </div>
+            
+                <div>
+                    <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary" disabled="@(isSubmitting || selectedRating == 0)">
+                        @if (isSubmitting)
+                        {
+                        }
+                        else
+                        {
+                            <p>Submit Review</p>
+                        }
+                         </button>
+                 </div>
+               </form>
+            }
+
+@code {
+    [Parameter]
+    public int TransactionId { get; set; }
+
+    private Transaction transaction;
+    private Review review = new();
+    private User reviewee;
+    private int selectedRating = 0;
+
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private bool loading = true;
+    private bool isSubmitting = false;
+    private bool hasAlreadyReviewed = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Check if user is logged in
+            if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 3 && session.CurrentUserRoleId != 1) // Ensure user is a buyer or Admin
+            {
+                NavManager.NavigateTo("/");
+                return;
+            }
+
+            // Load transaction
+            transaction = await Context.Transactions
+                .Include(t => t.Buyer)
+                .Include(t => t.Seller)
+                .Include(t => t.Offer)
+                .FirstOrDefaultAsync(t => t.Transaction_Id == TransactionId);
+
+            if (transaction == null)
+            {
+                errorMessage = "Transaction not found.";
+                loading = false;
+                return;
+            }
+
+            // Determine if current user is buyer or seller, and who they're reviewing
+            string currentUserId = session.CurrentUser.Id;
+            string revieweeId;
+
+            if (transaction.Buyer_Id == currentUserId)
+            {
+                // Buyer reviewing seller
+                revieweeId = transaction.Seller_Id;
+            }
+            else if (transaction.Seller_Id == currentUserId)
+            {
+                // Seller reviewing buyer
+                revieweeId = transaction.Buyer_Id;
+            }
+            else
+            {
+                // User is neither buyer nor seller
+                errorMessage = "You don't have permission to review this transaction.";
+                loading = false;
+                return;
+            }
+
+            // Load reviewee
+            reviewee = await Context.Users.FindAsync(revieweeId);
+
+            if (reviewee == null)
+            {
+                errorMessage = "Reviewee not found.";
+                loading = false;
+                return;
+            }
+
+            // Check if already reviewed
+            hasAlreadyReviewed = await ReviewService.UserHasReviewedTransactionAsync(TransactionId, currentUserId);
+
+            if (!hasAlreadyReviewed)
+            {
+                // Initialize review object
+                review.Transaction_ID = TransactionId;
+                review.Reviewer_ID = currentUserId;
+                review.Reviewee_ID = revieweeId;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading review page: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task SubmitReview()
+    {
+        try
+        {
+            isSubmitting = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+
+            // Validate
+            if (selectedRating == 0)
+            {
+                errorMessage = "Please select a rating.";
+                return;
+            }
+
+            if (selectedRating < 1 || selectedRating > 5)
+            {
+                errorMessage = "Rating must be between 1 and 5.";
+                return;
+            }
+
+            // Set rating
+            review.Rating = selectedRating;
+
+            // Check again if already reviewed (prevent double submission)
+            if (await ReviewService.UserHasReviewedTransactionAsync(TransactionId, session.CurrentUser.Id))
+            {
+                errorMessage = "You have already reviewed this transaction.";
+                return;
+            }
+
+            // Create review
+            await ReviewService.CreateReviewAsync(review);
+
+            successMessage = "Review submitted successfully!";
+            await Task.Delay(1500);
+            NavManager.NavigateTo("/dashboard");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error submitting review: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        NavManager.NavigateTo("/dashboard");
+    }
+
+    private void GoBack()
+    {
+        NavManager.NavigateTo("/dashboard");
+    }
+
+    private string RatingText(int rating)
+    {
+        return rating switch
+        {
+            1 => "Poor",
+            2 => "Fair",
+            3 => "Good",
+            4 => "Very Good",
+            5 => "Excellent",
+            _ => "Not rated"
+        };
+    }
+
+    private RenderFragment RenderStars(int count)
+    {
+        return @<text>@string.Concat(Enumerable.Range(0, count).Select(_ => "★")) @string.Concat(Enumerable.Range(0, 5 - count).Select(_ => "☆"))</text>;
+    }
+}
+
