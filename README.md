@@ -18,7 +18,7 @@ Option 1
 1. Open up Visual Studio Code 2026
 2. Click on 'Clone a Repository'
 3. Enter this URL into the location
-https://github.com/Skypie14/SomaShare.git
+https://github.com/ChristiDelaport/SomaShare.git
 
 ## OR ##
 
