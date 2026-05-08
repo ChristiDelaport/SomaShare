@@ -1,0 +1,70 @@
+﻿@page "/dashboard"
+@using SomaShare.Services
+@using SomaShare.Components.Model
+
+@inject IListingService ListingService
+@inject IWantedAdService WantedAdService
+@inject ITransactionService TransactionService
+@inject IReviewService ReviewService
+@inject UserSession UserSession
+@inject NavigationManager NavManager
+<link rel="stylesheet" href="~/Dashboard.css" />
+
+
+<h3>Dashboard</h3>
+
+
+<!-- Create Listing -->
+<div class="card p-3 mb-4">
+    <h4>Manage Listing</h4>
+    <button onclick="GoToManageListing"> Create Listing </button>
+</div>
+
+<!-- Create Wanted Ad -->
+<div class="card">
+    <h4>Create a Wanted Ad</h4>
+    <button onclick="GoToCreateWant"> Create Advertisement </button>
+</div>
+
+<!-- Trust Score -->
+<div class="card">
+    <h4>Community Trust</h4>
+    <p>Your average rating: @averageRating</p>
+</div>
+
+<!-- Pending Transactions -->
+<div class="card">
+    <h4>Pending Transactions</h4>
+    <ul>
+        @foreach (var t in pendingTransactions)
+        {
+            <li>@t.Offer.ListingAd.Textbook.Title - Status: @t.Status</li>
+        }
+    </ul>
+</div>
+
+@code {
+
+    private double averageRating;
+    private List<Transaction> pendingTransactions = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load trust score
+        averageRating = await ReviewService.GetAverageRatingAsync(UserSession.UserId);
+
+
+        // Load pending transactions
+        pendingTransactions = await TransactionService.GetPendingTransactionsAsync(UserSession.UserId);
+    }
+
+    private async Task GoToCreateListing()
+    {
+        NavManager.NavigateTo("/listings");
+    }
+
+    private async Task GoToCreateWant()
+    {
+        NavManager.NavigateTo("/wants");
+    }
+}

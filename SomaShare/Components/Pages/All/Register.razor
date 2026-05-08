@@ -1,0 +1,88 @@
+﻿@page "/Registration"
+@rendermode InteractiveServer
+@inject SomaContext context
+@using SomaShare.Components.Model
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<User> UserManager
+@inject NavigationManager NavManager
+
+
+
+
+
+<h3>Register</h3>
+
+
+<div class="reg-form">
+<input placeholder="First Name" @bind="firstName" />
+<br />
+
+<input placeholder="Last Name" @bind="lastName" />
+<br />
+
+<input placeholder="Email" @bind="email" />
+<br />
+
+<input placeholder="Password" type="password" @bind="password" />
+<br />
+
+<select @bind="roleId">
+    <option value="1">Buyer</option>
+    <option value="2">Seller</option>
+</select>
+
+<br />
+
+    <button class="btn-primary" @onclick="RegisterUser">Register</button>
+
+</div>
+
+<div class="login-link">
+<p>Have an account already?</p>
+<button class="btn-primary" @onclick ="GoToLogIn">Log In Here</button>
+</div>
+
+<p>@message</p>
+
+@code {
+    string firstName;
+    string lastName;
+    string email;
+    string password;
+    string message;
+
+    int roleId = 1;
+
+    private async Task RegisterUser()
+    {
+        // simple validation
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            message = "Email and password are required.";
+            return;
+        }
+
+        var user = new User
+        {
+            First_Name = firstName,
+            Last_Name = lastName,
+            Email = email,
+            Password = password,
+            Role_ID = roleId,
+            EnrollmentDate = DateTime.Now
+        };
+
+        await context.Users.AddAsync(user);
+        await context.SaveChangesAsync();
+
+        message = "Registration successful!";
+
+        // redirect to login
+        NavManager.NavigateTo("/");
+    }
+
+    private void GoToLogIn()
+    {
+        NavManager.NavigateTo("/");
+    }
+}
