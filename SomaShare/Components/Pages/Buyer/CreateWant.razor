@@ -1,0 +1,167 @@
+﻿@page "/create-want"
+@rendermode InteractiveServer
+@using SomaShare.Components.Model
+@using SomaShare.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.EntityFrameworkCore
+
+@inject IWantedAdService WantedAdService
+@inject SomaContext Context
+@inject NavigationManager NavManager
+@inject UserSession session
+
+<PageTitle>Create Want Ad - SomaShare</PageTitle>
+
+
+
+ <div>
+     <h3>Post What You're Looking For</h3>
+</div>
+     <div>
+
+       @if (!string.IsNullOrEmpty(errorMessage))
+         {
+          <div  role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+          </div>
+                    }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+         {
+            <div>
+              @successMessage
+              <button type="button" @onclick="() => successMessage = null"></button>
+            </div>
+                    }
+
+        <form @onsubmit="SubmitForm">
+          <h5 >Textbook Information</h5>
+          <div >
+            <div >
+              <label for="title" >Title *</label>
+              <input type="text" id="title" placeholder="Enter textbook title" @bind="textbook.Title" required />
+             </div>
+              <div>
+               <label for="author" >Author *</label>
+               <input type="text" id="author" placeholder="Enter author name" @bind="textbook.Author" required />
+             </div>
+          </div>
+
+          <div>
+            <div >
+              <label for="isbn" >ISBN</label>
+              <input type="text" id="isbn" placeholder="Enter ISBN (optional)" @bind="textbook.ISBN" />
+             </div>
+            <div>
+              <label for="version">Edition/Version</label>
+              <input type="text"  id="version" placeholder="e.g., 3rd Edition (optional)" @bind="textbook.Version" />
+            </div>
+          </div>
+
+          <div>
+            <label for="genre">Genre *</label>
+            <select id="genre" @bind="textbook.Genre_ID" required>
+              <option value="">-- Select a Genre --</option>
+              @foreach (var genre in genres)
+               {
+                <option value="@genre.Genre_ID">@genre.Genre_Name</option>
+               }
+             </select>
+          </div>
+
+          <div>
+            <label for="description" >Description</label>
+            <textarea id="description" rows="3" placeholder="What specific edition or condition are you looking for?" @bind="textbook.Description"></textarea>
+          </div>
+
+            <h5>Want Ad Details</h5>
+          <div>
+            <label for="maxPrice" >Maximum Price You're Willing to Pay ($)</label>
+            <input type="number" id="maxPrice" placeholder="0.00" step="0.01" min="0.01" max="10000" @bind="wantedAd.MaxPrice" />
+          </div>
+
+          <div >
+            <button type="button" @onclick="Cancel">Cancel</button>
+            <button type="submit"  disabled="@isSubmitting"> Post Want Ad </button>
+          </div>
+        </form>
+     </div>
+
+@code {
+    private Textbook textbook = new();
+    private WantedAd wantedAd = new();
+    private List<Genre> genres = new();
+
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private bool isSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if user is logged in and is a buyer
+        if (session?.CurrentUser == null || !session.IsBuyer)
+        {
+            NavManager.NavigateTo("/dashboard");
+            return;
+        }
+
+        // Load genres from database
+        genres = await Context.Genres.ToListAsync();
+    }
+
+    private async Task SubmitForm()
+    {
+        try
+        {
+            isSubmitting = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+
+            // Validate form
+            if (string.IsNullOrWhiteSpace(textbook.Title))
+            {
+                errorMessage = "Title is required";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(textbook.Author))
+            {
+                errorMessage = "Author is required";
+                return;
+            }
+
+            if (textbook.Genre_ID == 0)
+            {
+                errorMessage = "Please select a genre";
+                return;
+            }
+
+            // Set want ad properties
+            wantedAd.User_ID = session.CurrentUser.Id;
+            wantedAd.Genre_ID = textbook.Genre_ID;
+            wantedAd.Date_Posted = DateTime.UtcNow;
+            wantedAd.IsActive = true;
+
+            // Create want ad via service
+            await WantedAdService.CreateWantedAdAsync(textbook, wantedAd);
+
+            successMessage = "Want ad posted successfully!";
+            await Task.Delay(1500);
+            NavManager.NavigateTo("/managewants");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating want ad: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        NavManager.NavigateTo("/managewants");
+    }
+}

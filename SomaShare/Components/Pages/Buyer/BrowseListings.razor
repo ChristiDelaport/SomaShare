@@ -1,0 +1,205 @@
+﻿@page "/browselistings"
+@rendermode InteractiveServer
+@using SomaShare.Components.Model
+@using SomaShare.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.EntityFrameworkCore
+
+@inject IListingService ListingService
+@inject SomaContext Context
+@inject NavigationManager NavManager
+@inject UserSession session
+@inject ISearchService SearchService
+
+<PageTitle>Browse Listings - SomaShare</PageTitle>
+
+<div>
+    <h2>Textbook Listings</h2>
+    <p>Browse textbooks for sale from other students on campus!</p>
+
+    <div>
+        <div>
+            <h5>Search & Filter</h5>
+        </div>
+        <div class="card-body">
+            <div>
+                <label>Book Title or Author</label>
+                <input type="text" id="searchTitle" placeholder="Search..." @bind="searchTitle" @bind:event="oninput" />
+            </div>
+            <div>
+                <label for="genre">Genre</label>
+                <select id="genre" @bind="selectedGenre">
+                    <option value="">All Genres</option>
+                    @foreach (var genre in genres)
+                    {
+                        <option value="@genre.Genre_ID">@genre.Genre_Name</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label>&nbsp;</label>
+                <div>
+                    <button class="btn btn-primary" @onclick="Search"> Search </button>
+                    <button class="btn btn-secondary" @onclick="ClearFilters">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (loading)
+{
+    <p>Loading listings...</p>
+}
+else if (listings == null || listings.Count == 0)
+{
+    <div>
+        <h4>No Listings Found</h4>
+        <p>There are currently no listings matching your search.</p>
+    </div>
+}
+else
+{
+    <div>
+        @foreach (var listing in listings)
+        {
+            <div>
+                <h5>@listing.Textbook.Title</h5>
+                <p>by @listing.Textbook.Author</p>
+            </div>
+
+            <div class="card-body">
+                <div>
+                    @if (!string.IsNullOrEmpty(listing.Textbook.ISBN))
+                    {
+                        <p><strong>ISBN:</strong> @listing.Textbook.ISBN</p>
+                    }
+
+                    @if (!string.IsNullOrEmpty(listing.Textbook.Version))
+                    {
+                        <p>
+                            <strong>Edition:</strong> @listing.Textbook.Version
+                        </p>
+                    }
+
+                    <p><strong>Genre:</strong> @listing.Genre?.Genre_Name</p>
+
+                    <p><strong>Condition:</strong> @listing.Condition</p>
+
+                    <p><strong>Price:</strong> $@listing.Price.ToString("F2")</p>
+
+                    <p><strong>Posted:</strong> @listing.Date_Posted.ToString("MMM dd, yyyy")</p>
+                </div>
+
+                <div>
+                    <p><strong>Seller:</strong> @listing.User?.First_Name @listing.User?.Last_Name</p>
+                </div>
+
+                @if (!string.IsNullOrEmpty(listing.CampusLocation))
+                {
+                    <div>
+                        <p><strong>Campus Location:</strong> @listing.CampusLocation</p>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(listing.Description))
+                {
+                    <div>
+                        <p><strong>Details:</strong></p>
+                        <p>
+                            @if (listing.Description.Length > 100)
+                            {
+                                <text>@listing.Description.Substring(0, 100)...</text>
+                            }
+                            else
+                            {
+                                <text>@listing.Description</text>
+                            }
+                        </p>
+                    </div>
+                }
+
+                <div>
+                    <button class="btn btn-success" @onclick="() => MakeOffer(listing)">Make Offer</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<ListingAd> listings;
+    private List<Genre> genres = new();
+    private string searchTitle = string.Empty;
+    private string selectedGenre = string.Empty;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Check if user is logged in
+            if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 3 || session.CurrentUserRoleId == 1) // Ensure user is a buyer or Admin
+            {
+                NavManager.NavigateTo("/");
+                return;
+            }
+
+            // Load genres
+            genres = await Context.Genres.ToListAsync();
+
+            // Load all active listings
+            await LoadListings();
+        }
+        catch (Exception ex)
+        {
+            // Handle error silently for now
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task LoadListings()
+    {
+        try
+        {
+            listings = await ListingService.GetActiveBrowseableListingsAsync(session.CurrentUser.Id);
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+        }
+    }
+
+    private async Task Search()
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(searchTitle) || !string.IsNullOrWhiteSpace(selectedGenre))
+            {
+                listings = await ListingService.GetFilteredListingsAsync(searchTitle, selectedGenre, session.CurrentUser.Id);
+            }
+            else
+            {
+                await LoadListings();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+        }
+    }
+
+    private void ClearFilters()
+    {
+        searchTitle = string.Empty;
+        selectedGenre = string.Empty;
+    }
+
+    private void MakeOffer(ListingAd listing)
+    {
+        NavManager.NavigateTo($"/make-offer/{listing.ListingAd_ID}");
+    }
+}

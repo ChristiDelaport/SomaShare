@@ -1,0 +1,249 @@
+﻿@page "/wants"
+@rendermode InteractiveServer
+@using SomaShare.Components.Model
+@using SomaShare.Services
+@using Microsoft.AspNetCore.Components
+
+@inject IWantedAdService WantedAdService
+@inject NavigationManager NavManager
+@inject UserSession session
+
+<PageTitle>Manage Want Ads - SomaShare</PageTitle>
+
+
+    <div>
+        <div>
+            <h2>My Want Ads</h2>
+        </div>
+        <div >
+            <button @onclick="CreateNewWant">  Post New Want Ad </button>
+        </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))  
+    {
+        <div role="alert">
+            @errorMessage
+            <button type="button" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+
+    }
+    else if (wantedAds == null || wantedAds.Count == 0)
+    {
+        <div role="alert">
+            <h4 >No Want Ads Yet</h4>
+            <p>You haven't posted any want ads yet. Click the button above to post what you're looking for!</p>
+            <button class="btn btn-primary" @onclick="CreateNewWant">Post Want Ad</button>
+        </div>
+    }
+    else
+    {
+        <div>
+            @foreach (var wantedAd in wantedAds)
+            {
+              <div>
+                  <div>
+                       <h5>@wantedAd.Textbook.Title</h5>
+                       <p>by @wantedAd.Textbook.Author</p>
+                   </div> 
+               </div>
+                  
+               <div >
+              <div >
+                  @if (!string.IsNullOrEmpty(wantedAd.Textbook.ISBN))
+                    {
+                      <p> <strong>ISBN:</strong> @wantedAd.Textbook.ISBN </p>
+                     }
+
+                   @if (!string.IsNullOrEmpty(wantedAd.Textbook.Version))
+                     {
+                      <p> <strong>Edition:</strong> @wantedAd.Textbook.Version</p>
+                     }
+
+                       <p>
+                           <strong>Genre:</strong> @wantedAd.Genre?.Genre_Name
+                       </p>
+               
+                       <p>
+                           <strong>Posted:</strong> @wantedAd.Date_Posted.ToString("MMM dd, yyyy")
+                      </p>
+                
+                       @if (wantedAd.Date_Updated.HasValue)
+                       {
+                           <p> <strong>Updated:</strong> @wantedAd.Date_Updated.Value.ToString("MMM dd, yyyy") </p>
+                       }
+                            </div>
+
+                  @if (wantedAd.MaxPrice.HasValue && wantedAd.MaxPrice > 0)
+                 {
+                     <div>
+                         <p class="mb-0"><strong>Max Price:</strong>$@wantedAd.MaxPrice.Value.ToString("F2")</p>
+                     </div>
+                 }
+                 else
+                 {
+                     <div>
+                         <p><strong>Max Price:</strong> <em>No limit</em></p>
+                     </div>
+                            }
+
+                 @if (!string.IsNullOrEmpty(wantedAd.Description))
+                 {
+                     <p>
+                         @if (wantedAd.Description.Length > 100)
+                         {
+                             <text>@wantedAd.Description.Substring(0, 100)...</text>
+                         }
+                         else
+                         {
+                             <text>@wantedAd.Description</text>
+                         }
+                     </p>
+                 }
+             </div>
+
+           <div>
+               <button @onclick="() => EditWant(wantedAd.WantedAd_ID)"> Edit </button>
+              <button @onclick="() => DeleteWant(wantedAd.WantedAd_ID)"> Delete </button>
+           </div>
+                      
+            }
+        </div>
+    }
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteConfirm)
+{
+      <div class="modal-header">
+          <h5 class="modal-title">Delete Want Ad</h5>
+          <button type="button" class="btn-close" @onclick="() => showDeleteConfirm = false"></button>
+      </div>
+      <div class="modal-body">
+          <p>Are you sure you want to delete this want ad?</p>
+          <p class="text-muted">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" @onclick="() => showDeleteConfirm = false">Cancel</button>
+          <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@isDeleting">
+              @if (isDeleting)
+              {
+                  <p class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></p>
+                  <p>Deleting...</p>
+              }
+              else
+              {
+                  <p>Delete</p>
+              }
+          </button>
+      </div>
+
+}
+
+@code {
+    //list - store users wanted ads
+    private List<WantedAd> wantedAds;
+    //msgs for ui feedback
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    //ui state flags
+    private bool loading = true;
+    private bool isDeleting = false;
+    private bool showDeleteConfirm = false;
+    //stores id of the wanted ad to delete
+    private int wantedAdToDeleteId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Check if user is logged in
+            if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 3 && session.CurrentUserRoleId != 1) // Ensure user is a buyer or Admin
+            {
+                NavManager.NavigateTo("/");
+                return;
+            }
+
+            // Load user's want ads
+            await LoadWantedAds();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading want ads: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+
+    private async Task LoadWantedAds()
+    {
+        try
+        {
+            wantedAds = await WantedAdService.GetUserWantedAdsAsync(session.CurrentUser.Id);
+        }
+        catch (Exception ex)
+        {//data retrieval error handler
+            errorMessage = $"Error retrieving want ads: {ex.Message}";
+        }
+    }
+
+    //nav to create new wanted ad page
+    private void CreateNewWant()
+    {
+        NavManager.NavigateTo("/create-want");
+    }
+
+    //nav to specific wanted ad
+    private void EditWant(int wantedAdId)
+    {
+        NavManager.NavigateTo($"/edit-want/{wantedAdId}");
+    }
+
+    //trigger delete confirmation model
+    private void DeleteWant(int wantedAdId)
+    {
+        wantedAdToDeleteId = wantedAdId;  // store ID to delete
+        showDeleteConfirm = true; //show confirmation ui
+    }
+
+    //confirm and dlete wanted ad
+    private async Task ConfirmDelete()
+    {
+        try
+        {
+            isDeleting = true;
+            errorMessage = string.Empty;
+
+            //call service to delte the wanted ad
+            await WantedAdService.DeleteWantedAdAsync(wantedAdToDeleteId);
+
+            successMessage = "Want ad deleted successfully!";
+            showDeleteConfirm = false;
+
+            // Reload want ads list
+            await LoadWantedAds();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting want ad: {ex.Message}";
+        }
+        finally
+        {
+            isDeleting = false; //reset loading state
+        }
+    }
+}

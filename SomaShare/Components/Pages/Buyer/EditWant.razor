@@ -1,0 +1,237 @@
+﻿@page "/editwant/{wantedAdId:int}"
+@rendermode InteractiveServer
+@using SomaShare.Components.Model
+@using SomaShare.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.EntityFrameworkCore
+
+@inject IWantedAdService WantedAdService
+@inject SomaContext Context
+@inject NavigationManager NavManager
+@inject UserSession session
+
+<PageTitle>Edit Wanted Ad - SomaShare</PageTitle>
+
+<div>
+    <div>
+        @if (loading)
+        {
+
+        }
+        else if (wantedAd == null)
+        {
+            <div>
+                Wanted Ad not found or you don't have permission to edit this ad.
+            </div>
+            <button class="btn btn-secondary" @onclick="GoBack">Back to Wanted Ads</button>
+        }
+        else
+        {
+            <div class="card">
+                <h3>Edit Wanted Ad</h3>
+
+                <div>
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div role="alert">
+                            @errorMessage
+                            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div role="alert">
+                            @successMessage
+                            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+                        </div>
+                    }
+
+                    <form @onsubmit="SubmitForm">
+                        <h5>Textbook Information</h5>
+                        <div>
+                            <div>
+                                <label>Title</label>
+                                <input type="text" id="title" placeholder="Enter textbook title" @bind="wantedAd.Textbook.Title" required />
+
+                            </div>
+                            <div>
+                                <label>Author </label>
+                                <input type="text" id="author" placeholder="Enter author name" @bind="wantedAd.Textbook.Author" required />
+                            </div>
+                        </div>
+
+                        <div>
+                            <div>
+                                <label>ISBN</label>
+                                <input type="text" id="isbn" placeholder="Enter ISBN" @bind="wantedAd.Textbook.ISBN" />
+
+                            </div>
+                            <div>
+                                <label>Edition/Version</label>
+                                <input type="text" id="version" placeholder="Edition/Version"
+                                       @bind="wantedAd.Textbook.Version" />
+
+                            </div>
+                        </div>
+
+                        <div>
+                            <label>Genre </label>
+                            <select id="genre" @bind="wantedAd.Genre_ID" required>
+                                <option value="">-- Select a Genre --</option>
+                                @foreach (var genre in genres)
+                                {
+                                    <option value="@genre.Genre_ID">@genre.Genre_Name</option>
+                                }
+                            </select>
+                        </div>
+
+                        <div>
+                            <label> Description</label>
+                            <textarea id="description" rows="3" placeholder="Enter textbook description" @bind="wantedAd.Description"></textarea>
+
+                        </div>
+
+                        <h5>Wanted Ad Details</h5>
+                        <div>
+                            <div>
+                                <label> Max Price </label>
+                                <input type="number" id="maxPrice" placeholder="0.00" step="0.01" min="0.01" max="10000" @bind="wantedAd.MaxPrice" required />
+                            </div>
+                        </div>
+
+
+                        <div>
+                            <label>
+                                <input type="checkbox" @bind="wantedAd.IsActive" />
+                                <p>Wanted Ad is Active</p>
+                            </label>
+                        </div>
+
+                        <div>
+                            <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                                @if (isSubmitting)
+                                {
+                                }
+                                else
+                                {
+                                    <p>Save Changes</p>
+                                }
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int WantedAdId { get; set; }
+
+    private WantedAd wantedAd;
+    private List<Genre> genres = new();
+
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+    private bool isSubmitting = false;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Check if user is logged in
+            if (session?.CurrentUser == null)
+            {
+                NavManager.NavigateTo("/dashboard");
+                return;
+            }
+
+            // Load genres from database
+            genres = await Context.Genres.ToListAsync();
+
+            // Load wanted ad
+            wantedAd = await WantedAdService.GetWantedAdAsync(WantedAdId);
+
+            // Verify ownership
+            if (wantedAd == null || wantedAd.User_ID != session.CurrentUser.Id)
+            {
+                wantedAd = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading wanted ad: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task SubmitForm()
+    {
+        try
+        {
+            isSubmitting = true;
+            errorMessage = string.Empty;
+            successMessage = string.Empty;
+
+            // Validate form
+            if (string.IsNullOrWhiteSpace(wantedAd.Textbook.Title))
+            {
+                errorMessage = "Title is required";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(wantedAd.Textbook.Author))
+            {
+                errorMessage = "Author is required";
+                return;
+            }
+
+            if (wantedAd.Genre_ID == 0 || wantedAd.Genre_ID == null)
+            {
+                errorMessage = "Please select a genre";
+                return;
+            }
+
+            if (wantedAd.MaxPrice <= 0)
+            {
+                errorMessage = "Max price must be greater than $0.00";
+                return;
+            }
+
+            // Update Date_Updated
+            wantedAd.Date_Updated = DateTime.UtcNow;
+
+            // Update wanted ad via service
+            await WantedAdService.UpdateWantedAdAsync(wantedAd);
+
+            successMessage = "Wanted ad updated successfully!";
+            await Task.Delay(1500);
+            NavManager.NavigateTo("/managewants");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating wanted ad: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        NavManager.NavigateTo("/managewants");
+    }
+
+    private void GoBack()
+    {
+        NavManager.NavigateTo("/managewants");
+    }
+}
