@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace SomaShare.Components.Model
@@ -138,6 +139,92 @@ namespace SomaShare.Components.Model
                 new Genre { Genre_ID = 9, Genre_Name = "Business" },
                 new Genre { Genre_ID = 10, Genre_Name = "Psychology" }
             );
+            // Seed Users - compute password hashes so Identity can validate seeded credentials
+
+
+            var u1 = new User
+            {
+                Id = "1",
+                User_Id = 1,
+                UserName = "johnsmith",
+                NormalizedUserName = "JOHNSMITH",
+                Email = "john@UCT.co.za",
+                NormalizedEmail = "JOHN@UCT.CO.ZA",
+                First_Name = "John",
+                Last_Name = "Smith",
+                EmailConfirmed = true,
+                Password = "Rand0mPassword1",
+                Role_ID = 1,
+                EnrollmentDate = DateTime.Now
+            };
+
+            var u2 = new User
+            {
+                Id = "2",
+                User_Id = 2,
+                UserName = "sarahjones",
+                NormalizedUserName = "SARAHJONES",
+                Email = "sarah@Stadio.ac.za",
+                NormalizedEmail = "SARAH@STADIO.AC.ZA",
+                First_Name = "Sarah",
+                Last_Name = "Jones",
+                EmailConfirmed = true,
+                Password = "Rand0mPassword2",
+                Role_ID = 1,
+                EnrollmentDate = DateTime.Now
+            };
+
+            var u3 = new User
+            {
+                Id = "3",
+                User_Id = 3,
+                UserName = "michaelbrown",
+                NormalizedUserName = "MICHAELBROWN",
+                Email = "michael@example.com",
+                NormalizedEmail = "MICHAEL@EXAMPLE.COM",
+                First_Name = "Michael",
+                Last_Name = "Brown",
+                EmailConfirmed = true,
+                Password = "S33dedPassword!",
+                Role_ID = 2,
+                EnrollmentDate = DateTime.Now
+            };
+          
+
+            var u4 = new User
+            {
+                Id = "4",
+                User_Id = 4,
+                UserName = "emilydavis",
+                NormalizedUserName = "EMILYDAVIS",
+                Email = "emily@example.com",
+                NormalizedEmail = "EMILY@EXAMPLE.COM",
+                First_Name = "Emily",
+                Last_Name = "Davis",
+                EmailConfirmed = true,
+                Password = "AHHH@12C00l",
+                Role_ID = 3,
+                EnrollmentDate = DateTime.Now
+            };
+
+            var u5 = new User
+            {
+                Id = "5",
+                User_Id = 5,
+                UserName = "danielwilson",
+                NormalizedUserName = "DANIELWILSON",
+                Email = "daniel@example.com",
+                NormalizedEmail = "DANIEL@EXAMPLE.COM",
+                First_Name = "Daniel",
+                Last_Name = "Wilson",
+                EmailConfirmed = true,
+                Password = "SF11SHHH!",
+                Role_ID = 2,
+                EnrollmentDate = DateTime.Now
+            };
+
+            modelBuilder.Entity<User>().HasData(u1, u2, u3, u4, u5); // takes the user obj and seeds into the database
+
         }
 
         public SomaContext(DbContextOptions<SomaContext> options) : base(options)
