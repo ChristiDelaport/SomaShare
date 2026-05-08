@@ -1,0 +1,12 @@
+﻿@page "/logout"
+@rendermode InteractiveServer
+@inject NavigationManager NavManager
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        NavManager.NavigateTo("/");
+    }
+}
+
+<p>Logging out...</p>

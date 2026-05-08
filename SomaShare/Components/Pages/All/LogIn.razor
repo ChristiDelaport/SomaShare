@@ -1,0 +1,90 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@inject SomaContext context
+@inject NavigationManager NavManager
+@inject UserSession session
+@using SomaShare.Components.Model
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<User> UserManager
+
+
+<h3>Log In</h3>
+
+<div class="login-form">
+    <input placeholder="Email" @bind="email" />
+    <br />
+
+    <input placeholder="Password" type="password" @bind="password" />
+    <br />
+
+    <button class="btn-primary" @onclick="Log_In">Log In</button>
+
+    <p>@message</p>
+</div>
+
+
+<div class="reg-link">
+    <p>Don't have an account?</p>
+    <button class="btn-primary" @onclick="Registering">Register Here</button>
+</div>
+<div class="reg-link">
+
+    <p>Forgot Password?</p>
+    <button class="btn-primary" @onclick="ForgotPasswords">Change password</button>
+</div>
+
+
+@code {
+    string email;
+    string password;
+    string message;
+
+    private async Task Log_In()
+    {
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            message = "Please enter email and password.";
+            return;
+        }
+
+        var user = context.Users
+            .FirstOrDefault(u => u.Email == email && u.Password == password);
+
+        if (user != null)
+        {
+            session.CurrentUser = user; // store logged-in user
+            session.CurrentUserId = user.User_Id;
+            session.CurrentUserRoleId = user.Role_ID;
+
+            // Fetch and store the user's role
+            var roles = new[] { "Admin", "Seller", "Buyer" };
+            foreach (var roleName in roles)
+            {
+                var userRole = await UserManager.IsInRoleAsync(user, roleName);
+                if (userRole)
+                {
+                    session.CurrentUserRole = roleName;
+
+                    break;
+                }
+            }
+
+            message = "Login successful!";
+            NavManager.NavigateTo("/Dashboard");
+        }
+        else
+        {
+            message = "Invalid email or password.";
+        }
+    }
+
+    private void Registering()
+    {
+        NavManager.NavigateTo("/Registration");
+    }
+
+    private void ForgotPasswords()
+    {
+        NavManager.NavigateTo("/ForgotPassword");
+    }
+}
