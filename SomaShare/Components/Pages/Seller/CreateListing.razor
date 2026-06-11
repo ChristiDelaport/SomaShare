@@ -8,6 +8,7 @@
 @inject SomaContext Context
 @inject NavigationManager NavManager
 @inject UserSession session
+@inject IJSRuntime JS
 
 <PageTitle>Create Listing</PageTitle>
 
@@ -27,6 +28,7 @@
 
     <h4>Textbook Info</h4>
 
+    <div class="form">
     <label>Title *</label>
     <input @bind="textbook.Title" required />
     <br />
@@ -44,21 +46,22 @@
     <br />
 
     <label>Genre *</label>
-    <select @bind="textbook.Genre_ID" required>
+    <select @bind="textbook.Genre_Id" required>
         <option value="">-- Select Genre --</option>
         @foreach (var genre in genres)
         {
-            <option value="@genre.Genre_ID">@genre.Genre_Name</option>
+            <option value="@genre.Genre_Id">@genre.Genre_Name</option>
         }
     </select>
     <br />
 
     <label>Description</label>
     <textarea @bind="textbook.Description"></textarea>
+    </div>
     <br />
 
     <h4>Listing Details</h4>
-
+    <div class="form">
     <label>Price *</label>
     <input type="number" step="0.01" @bind="listing.Price" required />
     <br />
@@ -76,11 +79,11 @@
     <label>Campus Location</label>
     <input @bind="listing.CampusLocation" />
     <br />
-
+    </div>
     <br />
 
-    <button type="button" @onclick="Cancel">Cancel</button>
-    <button type="submit" disabled="@isSubmitting">
+    <button type="button" class="btn btn-primary" @onclick="Cancel">Cancel</button>
+    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
         @(isSubmitting ? "Creating..." : "Create Listing")
     </button>
 
@@ -98,11 +101,11 @@
     protected override async Task OnInitializedAsync()
     {
         // Check if user is logged in
-        if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 2 && session.CurrentUserRoleId != 1) // Ensure user is a seller or Admin
-        {
-            NavManager.NavigateTo("/");
-            return;
-        }
+       // if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 2 && session.CurrentUserRoleId != 1) // Ensure user is a seller or Admin
+       // {
+        //    NavManager.NavigateTo("/", forceLoad: true);
+        //    return;
+        // }
 
         genres = await Context.Genres.ToListAsync();
 
@@ -114,6 +117,41 @@
     {
         try
         {
+            // CHANGE - makes sure the CurrentUser in session has all the user information.
+            if (string.IsNullOrEmpty(session.User_Id))
+            {
+                try
+                {
+                    var stored = await JS.InvokeAsync<string>("sessionStorage.getItem", "User_Id");
+                    if (!string.IsNullOrEmpty(stored))
+                    {
+                        session.User_Id = stored;
+                    }
+                }
+                catch
+                {
+                    // ignore JS errors
+                }
+            }
+
+            // repairs currentuser info if session has user id but no current user info
+            if (session.CurrentUser == null && !string.IsNullOrEmpty(session.User_Id))
+            {
+                try
+                {
+                    var user = await Context.Users.FirstOrDefaultAsync(u => u.Id == session.User_Id);
+                    if (user != null)
+                    {
+                        session.CurrentUser = user;
+                        session.CurrentUserId = user.User_Id;
+                        session.CurrentUserRoleId = user.Role_Id;
+                    }
+                }
+                catch
+                {
+                    // ignore DB errors
+                }
+            }
             isSubmitting = true;
             errorMessage = string.Empty;
             successMessage = string.Empty;
@@ -130,7 +168,7 @@
                 return;
             }
 
-            if (textbook.Genre_ID == 0)
+            if (textbook.Genre_Id == 0)
             {
                 errorMessage = "Please select a genre";
                 return;
@@ -138,7 +176,7 @@
 
             if (listing.Price <= 0)
             {
-                errorMessage = "Price must be greater than $0.00";
+                errorMessage = "Price must be greater than R0.00";
                 return;
             }
 
@@ -148,16 +186,17 @@
                 return;
             }
 
-            listing.User_ID = session.CurrentUser.Id;
-            listing.Genre_ID = textbook.Genre_ID;
-            listing.Date_Posted = DateTime.UtcNow;
+            var userId = session.CurrentUser?.Id ?? session.User_Id ?? string.Empty;
+            listing.User_Id = userId;
+            listing.Genre_Id = textbook.Genre_Id;
+            listing.Date_Posted = DateTime.Now;
             listing.IsActive = true;
 
             await ListingService.CreateListingAsync(textbook, listing);
 
             successMessage = "Listing created successfully!";
             await Task.Delay(1500);
-            NavManager.NavigateTo("/managelistings");
+            NavManager.NavigateTo("/listings");
         }
         catch (Exception ex)
         {
@@ -171,6 +210,6 @@
 
     private void Cancel()
     {
-        NavManager.NavigateTo("/managelistings");
+        NavManager.NavigateTo("listings");
     }
 }

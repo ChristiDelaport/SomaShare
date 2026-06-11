@@ -6,18 +6,18 @@ namespace SomaShare.Components.Model
     public class Review
     {
         [Key]
-        public int Review_ID { get; set; }
+        public int Review_Id { get; set; }
 
         [Required(ErrorMessage = "Transaction is required")]
-        public int Transaction_ID { get; set; }
+        public int Transaction_Id { get; set; }
         public Transaction Transaction { get; set; }
 
         [Required(ErrorMessage = "Reviewer is required")]
-        public string Reviewer_ID { get; set; }
+        public string Reviewer_Id { get; set; }
         public User Reviewer { get; set; }
 
         [Required(ErrorMessage = "Reviewee is required")]
-        public string Reviewee_ID { get; set; }
+        public string Reviewee_Id { get; set; }
         public User Reviewee { get; set; }
 
         [Required(ErrorMessage = "Rating is required")] [Range(1, 5, ErrorMessage = "Must be between 1 and 5")]

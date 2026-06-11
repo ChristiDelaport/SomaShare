@@ -13,15 +13,16 @@
 
 <PageTitle>Browse Listings - SomaShare</PageTitle>
 
-<div>
+<div class="listingwants">
+    <div class="title">
     <h2>Textbook Listings</h2>
     <p>Browse textbooks for sale from other students on campus!</p>
-
+</div>
     <div>
         <div>
             <h5>Search & Filter</h5>
         </div>
-        <div class="card-body">
+        <div class="card">
             <div>
                 <label>Book Title or Author</label>
                 <input type="text" id="searchTitle" placeholder="Search..." @bind="searchTitle" @bind:event="oninput" />
@@ -32,7 +33,7 @@
                     <option value="">All Genres</option>
                     @foreach (var genre in genres)
                     {
-                        <option value="@genre.Genre_ID">@genre.Genre_Name</option>
+                        <option value="@genre.Genre_Id">@genre.Genre_Name</option>
                     }
                 </select>
             </div>
@@ -63,13 +64,13 @@ else
     <div>
         @foreach (var listing in listings)
         {
-            <div>
-                <h5>@listing.Textbook.Title</h5>
-                <p>by @listing.Textbook.Author</p>
-            </div>
-
+            
             <div class="card-body">
+
                 <div>
+                    <h5>@listing.Textbook.Title</h5>
+                     <p>by @listing.Textbook.Author</p>
+                    
                     @if (!string.IsNullOrEmpty(listing.Textbook.ISBN))
                     {
                         <p><strong>ISBN:</strong> @listing.Textbook.ISBN</p>
@@ -86,7 +87,7 @@ else
 
                     <p><strong>Condition:</strong> @listing.Condition</p>
 
-                    <p><strong>Price:</strong> $@listing.Price.ToString("F2")</p>
+                    <p><strong>Price:</strong>  R @listing.Price.ToString("F2")</p>
 
                     <p><strong>Posted:</strong> @listing.Date_Posted.ToString("MMM dd, yyyy")</p>
                 </div>
@@ -138,12 +139,13 @@ else
     {
         try
         {
+           
             // Check if user is logged in
-            if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 3 || session.CurrentUserRoleId == 1) // Ensure user is a buyer or Admin
-            {
-                NavManager.NavigateTo("/");
-                return;
-            }
+            // if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 3 || session.CurrentUserRoleId == 1) // Ensure user is a buyer or Admin
+            //{
+            //    NavManager.NavigateTo("/", forceLoad: true);
+            //    return;
+           // }
 
             // Load genres
             genres = await Context.Genres.ToListAsync();
@@ -165,7 +167,29 @@ else
     {
         try
         {
-            listings = await ListingService.GetActiveBrowseableListingsAsync(session.CurrentUser.Id);
+            // CHANGE - makes sure the CurrentUser in session has all the user information.
+            string excludeUserId = session.CurrentUser?.Id ?? session.User_Id ?? string.Empty;
+
+            // CHANGE - If CurrentUser is null, try to load the User from the DB if info is available in session
+            if (session.CurrentUser == null && !string.IsNullOrEmpty(session.User_Id))
+            {
+                try
+                {
+                    var user = await Context.Users.FirstOrDefaultAsync(u => u.Id == session.User_Id);
+                    if (user != null)
+                    {
+                        session.CurrentUser = user;
+                        session.CurrentUserId = user.User_Id;
+                        session.CurrentUserRoleId = user.Role_Id;
+                    }
+                }
+                catch
+                {
+                    // ignore DB errors
+                }
+            }
+
+            listings = await ListingService.GetActiveBrowseableListingsAsync(excludeUserId);
         }
         catch (Exception ex)
         {
@@ -179,7 +203,9 @@ else
         {
             if (!string.IsNullOrWhiteSpace(searchTitle) || !string.IsNullOrWhiteSpace(selectedGenre))
             {
-                listings = await ListingService.GetFilteredListingsAsync(searchTitle, selectedGenre, session.CurrentUser.Id);
+                // CHANGE - Uses stored identity id if CurrentUser is empty
+                var excludeUserId = session.CurrentUser?.Id ?? session.User_Id ?? string.Empty;
+                listings = await ListingService.GetFilteredListingsAsync(searchTitle, selectedGenre, excludeUserId);
             }
             else
             {
@@ -200,6 +226,6 @@ else
 
     private void MakeOffer(ListingAd listing)
     {
-        NavManager.NavigateTo($"/make-offer/{listing.ListingAd_ID}");
+        NavManager.NavigateTo($"/make-offer/{listing.ListingAd_Id}");
     }
 }

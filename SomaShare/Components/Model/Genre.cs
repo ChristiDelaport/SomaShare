@@ -5,7 +5,7 @@ namespace SomaShare.Components.Model
     public class Genre
     {
         [Key] 
-        public int Genre_ID { get; set; }
+        public int Genre_Id { get; set; }
 
         [Required] 
         public string Genre_Name { get; set; }

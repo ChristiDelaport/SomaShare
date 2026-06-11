@@ -4,47 +4,76 @@
     </div>
 </div>
 
+@* CHANGE - use ForceLoad="true" to ensure all cookies stay enabled*@
+
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
 <div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav>
  <div class="nav-item px-3">
+    
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
 
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="Dashboard">
+        @* CHANGE - shows Dashboard only if logged in, force full load so cookies/auth sent *@
+        <AuthorizeView Roles="Buyer,Admin, Seller">
+            <Authorized>
+
+             <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/profile" ForceLoad="true">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Profile
+            </NavLink>
+            </div> 
+             
+            <div class="nav-item px-3">
+            <NavLink class="nav-link" href="/Dashboard" ForceLoad="true">
                 <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Dashboard
             </NavLink>
-        </div>
+            </div> 
+
+            </Authorized>
+        </AuthorizeView>
+
+        @* CHANGE - show Manage Wants + Browse Listing only to Buyers and Admins, force full load so cookies/auth sent *@
+        <AuthorizeView Roles="Buyer,Admin">
+            <Authorized>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/browselistings" ForceLoad="true">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Browse Listings
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/wants" ForceLoad="true">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Manage Wants
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+
+        @* CHANGE - show Manage Listings + Browse Wants only to Sellers and Admins, force full load so cookies/auth sent *@
+        <AuthorizeView Roles="Seller,Admin">
+            <Authorized>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/browsewants" ForceLoad="true">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Browse Wants
+                    </NavLink>
+                </div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="/listings" ForceLoad="true">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Manage Listings
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="browsewants">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Browse Wants
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="browselistings">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Browse Listings
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="wants">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Manage Wants
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="listings">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Manage Listings
-            </NavLink>
-        </div>
-
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="logout">
+            <NavLink class="nav-link" href="logout" ForceLoad="true">
                 <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Log Out
             </NavLink>
         </div>

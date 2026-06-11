@@ -135,11 +135,11 @@
         try
         {
             // Check if user is logged in
-            if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 3 && session.CurrentUserRoleId != 1) // Ensure user is a buyer or Admin
-            {
-                NavManager.NavigateTo("/");
-                return;
-            }
+           // if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 3 && session.CurrentUserRoleId != 1) // Ensure user is a buyer or Admin
+           // {
+           //     NavManager.NavigateTo("/", forceLoad: true);
+           //     return;
+          //  }
 
             // Load transaction
             transaction = await Context.Transactions
@@ -193,9 +193,9 @@
             if (!hasAlreadyReviewed)
             {
                 // Initialize review object
-                review.Transaction_ID = TransactionId;
-                review.Reviewer_ID = currentUserId;
-                review.Reviewee_ID = revieweeId;
+                review.Transaction_Id = TransactionId;
+                review.Reviewer_Id = currentUserId;
+                review.Reviewee_Id = revieweeId;
             }
         }
         catch (Exception ex)

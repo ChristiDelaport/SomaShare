@@ -6,9 +6,10 @@
 @using SomaShare.Components.Model
 @using Microsoft.AspNetCore.Identity
 @inject UserManager<User> UserManager
+@inject IJSRuntime JS
 
 
-<h3>Log In</h3>
+<h1>Log In</h1>
 
 <div class="login-form">
     <input placeholder="Email" @bind="email" />
@@ -53,8 +54,7 @@
         if (user != null)
         {
             session.CurrentUser = user; // store logged-in user
-            session.CurrentUserId = user.User_Id;
-            session.CurrentUserRoleId = user.Role_ID;
+            session.CurrentUser = session.CurrentUser;
 
             // Fetch and store the user's role
             var roles = new[] { "Admin", "Seller", "Buyer" };
@@ -70,7 +70,16 @@
             }
 
             message = "Login successful!";
-            NavManager.NavigateTo("/Dashboard");
+            // Change - saves the user id to sessionStorage 
+            try
+            {
+                await JS.InvokeVoidAsync("sessionStorage.setItem", "User_Id", user.Id);
+            }
+            catch
+            {
+                // ignore JS errors
+            }
+            NavManager.NavigateTo("/Dashboard", forceLoad: true);
         }
         else
         {

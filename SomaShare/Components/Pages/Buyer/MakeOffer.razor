@@ -9,6 +9,8 @@
 @inject IListingService ListingService
 @inject NavigationManager NavManager
 @inject UserSession session
+@inject SomaContext Context
+@inject IJSRuntime JS
 
 <PageTitle>Make an Offer - SomaShare</PageTitle>
 
@@ -86,11 +88,11 @@
                          var percentage = (difference / listing.Price) * 100;
                          @if (difference > 0)
                          {
-                             <text>You are offering <strong>$@difference.ToString("F2")</strong> (<strong>@percentage.ToString("F1")%</strong>) less than asking price</text>
+                             <text>You are offering <strong>R @difference.ToString("F2")</strong> (<strong>@percentage.ToString("F1")%</strong>) less than asking price</text>
                          }
                          else if (difference < 0)
                          {
-                             <text>You are offering <strong>$@Math.Abs(difference).ToString("F2")</strong> (<strong>@Math.Abs(percentage).ToString("F1")%</strong>) more than asking price</text>
+                             <text>You are offering <strong>R @Math.Abs(difference).ToString("F2")</strong> (<strong>@Math.Abs(percentage).ToString("F1")%</strong>) more than asking price</text>
                          }
                          else
                          {
@@ -141,6 +143,7 @@
     private bool loading = true;
     private bool isSubmitting = false;
     private bool hasAlreadyMadeOffer = false;
+    private string resolvedUserId = string.Empty;
 
 
     protected override async Task OnInitializedAsync()
@@ -148,11 +151,11 @@
         try
         {
             // Check if user is logged in
-            if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 3 && session.CurrentUserRoleId != 1) // Ensure user is a buyer or Admin
-            {
-                NavManager.NavigateTo("/");
-                return;
-            }
+            //if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 3 && session.CurrentUserRoleId != 1) // Ensure user is a buyer or Admin
+            //{
+             //   NavManager.NavigateTo("/", forceLoad: true);
+             //   return;
+            //}
 
             // Load listing 
             listing = await ListingService.GetListingAsync(ListingId);
@@ -164,24 +167,67 @@
                 return;
             }
 
-            // prevent buyer from making offer on own listing
-            if (listing.User_ID == session.CurrentUser.Id)
+            // prevents buyer from making offer on own listing
+
+            // CHANGE - fixes user id if session lost it
+            if (string.IsNullOrEmpty(session.User_Id))
+            {
+                try
+                {
+                    var stored = await JS.InvokeAsync<string>("sessionStorage.getItem", "User_Id");
+                    if (!string.IsNullOrEmpty(stored)) session.User_Id = stored;
+                }
+                catch
+                {
+                    // ignore JS errors
+                }
+            }
+
+            // CHANGE - if CurrentUser is null but it has stored identity id, try to load user from DB
+            if (session.CurrentUser == null && !string.IsNullOrEmpty(session.User_Id))
+            {
+                try
+                {
+                    var user = await Context.Users.FirstOrDefaultAsync(u => u.Id == session.User_Id);
+                    if (user != null)
+                    {
+                        session.CurrentUser = user;
+                        session.CurrentUserId = user.User_Id;
+                        session.CurrentUserRoleId = user.Role_Id;
+                    }
+                }
+                catch
+                {
+                    // ignore DB errors
+                }
+            }
+
+            resolvedUserId = session.CurrentUser?.Id ?? session.User_Id ?? string.Empty;
+
+            if (listing.User_Id == resolvedUserId)
             {
                 errorMessage = "You cannot make an offer on your own listing";
                 loading = false;
                 return;
             }
 
-            // Check if user already made an offer
-            hasAlreadyMadeOffer = await OfferService.HasUserMadeOfferAsync(ListingId, session.CurrentUser.Id);
+            // CHANGE - checks if user already made an offer
+            if (!string.IsNullOrEmpty(resolvedUserId))
+            {
+                hasAlreadyMadeOffer = await OfferService.HasUserMadeOfferAsync(ListingId, resolvedUserId);
+            }
+            else
+            {
+                hasAlreadyMadeOffer = false;
+            }
 
-            //if no offer exists, initialize one
+            //if no offer exists, creates one
             if (!hasAlreadyMadeOffer)
             {
-                // Initialize offer
-                offer.ListingAd_ID = ListingId;  //link to listing
-                offer.Buyer_ID = session.CurrentUser.Id; //current user is buyer
-                offer.Seller_ID = listing.User_ID;  //current owner is seller
+                // makes offer
+                offer.ListingAd_Id = ListingId;  //link to listing
+                offer.Buyer_Id = session.CurrentUser.Id; //current user is buyer
+                offer.Seller_Id = listing.User_Id;  //current owner is seller
             }
         }
         catch (Exception ex)
@@ -205,18 +251,20 @@
             // Validate max price limit (> 0)
             if (offer.OfferedPrice <= 0)
             {
-                errorMessage = "Offer price must be greater than $0.00";
+                errorMessage = "Offer price must be greater than R0.00";
                 return;
             }
 
             if (offer.OfferedPrice > 10000)
             {
-                errorMessage = "Offer price cannot exceed $10,000";
+                errorMessage = "Offer price cannot exceed R10,000";
                 return;
             }
 
             // Check again if already made offer (prevent double submission)
-            if (await OfferService.HasUserMadeOfferAsync(ListingId, session.CurrentUser.Id))
+            var submitUserId = resolvedUserId;
+            if (string.IsNullOrEmpty(submitUserId)) submitUserId = session.CurrentUser?.Id ?? session.User_Id ?? string.Empty;
+            if (string.IsNullOrEmpty(submitUserId) || await OfferService.HasUserMadeOfferAsync(ListingId, submitUserId))
             {
                 errorMessage = "You have already made an offer on this listing";
                 return;

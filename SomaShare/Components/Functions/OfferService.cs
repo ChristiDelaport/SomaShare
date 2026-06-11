@@ -32,13 +32,13 @@ namespace SomaShare.Services
                 .Include(o => o.ListingAd)
                 .ThenInclude(l => l.Textbook)
                 .Include(o => o.Transaction)
-                .FirstOrDefaultAsync(o => o.Offer_ID == offerId);
+                .FirstOrDefaultAsync(o => o.Offer_Id == offerId);
         }
 
         public async Task<List<Offer>> GetListingOffersAsync(int listingId)
         {
             return await _context.Offers
-                .Where(o => o.ListingAd_ID == listingId)
+                .Where(o => o.ListingAd_Id == listingId)
                 .Include(o => o.Buyer)
                 .Include(o => o.Seller)
                 .Include(o => o.ListingAd)
@@ -49,7 +49,7 @@ namespace SomaShare.Services
         public async Task<List<Offer>> GetBuyerOffersAsync(string buyerId)
         {
             return await _context.Offers
-                .Where(o => o.Buyer_ID == buyerId)
+                .Where(o => o.Buyer_Id == buyerId)
                 .Include(o => o.ListingAd)
                 .ThenInclude(l => l.Textbook)
                 .Include(o => o.Seller)
@@ -60,7 +60,7 @@ namespace SomaShare.Services
         public async Task<List<Offer>> GetSellerOffersAsync(string sellerId)
         {
             return await _context.Offers
-                .Where(o => o.Seller_ID == sellerId)
+                .Where(o => o.Seller_Id == sellerId)
                 .Include(o => o.Buyer)
                 .Include(o => o.ListingAd)
                 .ThenInclude(l => l.Textbook)
@@ -70,7 +70,7 @@ namespace SomaShare.Services
 
         public async Task<Offer> CreateOfferAsync(Offer offer)
         {
-            offer.DateCreated = DateTime.UtcNow;
+            offer.DateCreated = DateTime.Now;
             offer.Status = "Pending";
 
             await _context.Offers.AddAsync(offer);
@@ -87,7 +87,7 @@ namespace SomaShare.Services
                 throw new InvalidOperationException("Offer not found");
 
             offer.Status = status;
-            offer.DateResponded = DateTime.UtcNow;
+            offer.DateResponded = DateTime.Now;
 
             _context.Offers.Update(offer);
             await _context.SaveChangesAsync();
@@ -98,15 +98,15 @@ namespace SomaShare.Services
         public async Task<int> GetPendingOffersCountAsync(int listingId)
         {
             return await _context.Offers
-                .Where(o => o.ListingAd_ID == listingId && o.Status == "Pending")
+                .Where(o => o.ListingAd_Id == listingId && o.Status == "Pending")
                 .CountAsync();
         }
 
         public async Task<bool> HasUserMadeOfferAsync(int listingId, string buyerId)
         {
             return await _context.Offers
-                .AnyAsync(o => o.ListingAd_ID == listingId
-                    && o.Buyer_ID == buyerId
+                .AnyAsync(o => o.ListingAd_Id == listingId
+                    && o.Buyer_Id == buyerId
                     && (o.Status == "Pending" || o.Status == "Accepted"));
         }
     }

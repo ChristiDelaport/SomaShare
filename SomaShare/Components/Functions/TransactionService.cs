@@ -74,7 +74,7 @@ namespace SomaShare.Services
 
         public async Task<Transaction> CreateTransactionAsync(Transaction transaction)
         {
-            transaction.Date_Created = DateTime.UtcNow;
+            transaction.Date_Created = DateTime.Now;
             transaction.Status = "Pending";
 
             await _context.Transactions.AddAsync(transaction);
@@ -91,7 +91,7 @@ namespace SomaShare.Services
                 throw new InvalidOperationException("Transaction not found");
 
             transaction.Status = "Completed";
-            transaction.Date_Completed = DateTime.UtcNow;
+            transaction.Date_Completed = DateTime.Now;
 
             _context.Transactions.Update(transaction);
             await _context.SaveChangesAsync();

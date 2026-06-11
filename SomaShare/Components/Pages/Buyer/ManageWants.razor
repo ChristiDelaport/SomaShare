@@ -3,21 +3,23 @@
 @using SomaShare.Components.Model
 @using SomaShare.Services
 @using Microsoft.AspNetCore.Components
+@using Microsoft.EntityFrameworkCore
+
+@inject SomaContext Context
 
 @inject IWantedAdService WantedAdService
 @inject NavigationManager NavManager
 @inject UserSession session
+@inject IJSRuntime JS
 
 <PageTitle>Manage Want Ads - SomaShare</PageTitle>
 
 
-    <div>
+<div class="manage-wants">
         <div>
             <h2>My Want Ads</h2>
         </div>
-        <div >
-            <button @onclick="CreateNewWant">  Post New Want Ad </button>
-        </div>
+</div>
 
     @if (!string.IsNullOrEmpty(errorMessage))  
     {
@@ -49,7 +51,8 @@
     }
     else
     {
-        <div>
+        <div class="card-body">
+                            <div>
             @foreach (var wantedAd in wantedAds)
             {
               <div>
@@ -88,7 +91,7 @@
                   @if (wantedAd.MaxPrice.HasValue && wantedAd.MaxPrice > 0)
                  {
                      <div>
-                         <p class="mb-0"><strong>Max Price:</strong>$@wantedAd.MaxPrice.Value.ToString("F2")</p>
+                         <p class="mb-0"><strong>Max Price:</strong>R @wantedAd.MaxPrice.Value.ToString("F2")</p>
                      </div>
                  }
                  else
@@ -112,16 +115,18 @@
                      </p>
                  }
              </div>
-
+            
+            
            <div>
-               <button @onclick="() => EditWant(wantedAd.WantedAd_ID)"> Edit </button>
-              <button @onclick="() => DeleteWant(wantedAd.WantedAd_ID)"> Delete </button>
+               <button @onclick="() => EditWant(wantedAd.WantedAd_Id)"> Edit </button>
+              <button @onclick="() => DeleteWant(wantedAd.WantedAd_Id)"> Delete </button>
            </div>
                       
             }
         </div>
     }
 </div>
+
 
 <!-- Delete Confirmation Modal -->
 @if (showDeleteConfirm)
@@ -169,11 +174,11 @@
         try
         {
             // Check if user is logged in
-            if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 3 && session.CurrentUserRoleId != 1) // Ensure user is a buyer or Admin
-            {
-                NavManager.NavigateTo("/");
-                return;
-            }
+           // if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 3 && session.CurrentUserRoleId != 1) // Ensure user is a buyer or Admin
+           // {
+           //     NavManager.NavigateTo("/", forceLoad: true);
+            //    return;
+           // }
 
             // Load user's want ads
             await LoadWantedAds();
@@ -191,26 +196,63 @@
 
     private async Task LoadWantedAds()
     {
-        try
+        //  CHANGE - It checks and makes sure we have an identity id from sessionStorage if session doesn't have it
+        if (string.IsNullOrEmpty(session.User_Id))
         {
-            wantedAds = await WantedAdService.GetUserWantedAdsAsync(session.CurrentUser.Id);
+            try
+            {
+                var stored = await JS.InvokeAsync<string>("sessionStorage.getItem", "User_Id");
+                if (!string.IsNullOrEmpty(stored)) session.User_Id = stored;
+            }
+            catch
+            {
+                // ignores JS errors
+            }
         }
-        catch (Exception ex)
-        {//data retrieval error handler
-            errorMessage = $"Error retrieving want ads: {ex.Message}";
+
+        // Makes sure the CurrentUser in session has all the user information when possible
+        if (session.CurrentUser == null && !string.IsNullOrEmpty(session.User_Id))
+        {
+            try
+            {
+                var user = await Context.Users.FirstOrDefaultAsync(u => u.Id == session.User_Id);
+                if (user != null)
+                {
+                    session.CurrentUser = user;
+                    session.CurrentUserId = user.User_Id;
+                    session.CurrentUserRoleId = user.Role_Id;
+                }
+            }
+            catch
+            {
+                // ignore DB errors
+            }
+        }
+
+        var userId = session.CurrentUser?.Id ?? session.User_Id ?? string.Empty;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            try
+            {
+                wantedAds = await WantedAdService.GetUserWantedAdsAsync(userId);
+            }
+            catch
+            {
+                // ignore load errors
+            }
         }
     }
 
     //nav to create new wanted ad page
     private void CreateNewWant()
     {
-        NavManager.NavigateTo("/create-want");
+        NavManager.NavigateTo("/create-want", forceLoad: true);
     }
 
     //nav to specific wanted ad
     private void EditWant(int wantedAdId)
     {
-        NavManager.NavigateTo($"/edit-want/{wantedAdId}");
+        NavManager.NavigateTo($"/edit-want/{wantedAdId}", forceLoad: true);
     }
 
     //trigger delete confirmation model
@@ -246,4 +288,5 @@
             isDeleting = false; //reset loading state
         }
     }
-}
+    }
+    }

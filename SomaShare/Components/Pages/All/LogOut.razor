@@ -1,11 +1,20 @@
 ﻿@page "/logout"
 @rendermode InteractiveServer
 @inject NavigationManager NavManager
+@inject IJSRuntime JS
 
 @code {
     protected override async Task OnInitializedAsync()
     {
-        NavManager.NavigateTo("/");
+        try
+        {
+            await JS.InvokeVoidAsync("sessionStorage.removeItem", "UserId");
+        }
+        catch
+        {
+            // ignore
+        }
+        NavManager.NavigateTo("/", forceLoad: true);
     }
 }
 

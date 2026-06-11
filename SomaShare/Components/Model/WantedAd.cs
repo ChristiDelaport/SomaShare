@@ -5,18 +5,18 @@ using System.ComponentModel.DataAnnotations.Schema;
 public class WantedAd
 {
     [Key]
-    public int WantedAd_ID { get; set; }
+    public int WantedAd_Id { get; set; }
 
     [Required(ErrorMessage = "User is required")]
-    public string User_ID { get; set; }
+    public string User_Id { get; set; }
     public User User { get; set; }
 
     [Required(ErrorMessage = "Textbook is required")]
-    public int Textbook_ID { get; set; }
+    public int Textbook_Id { get; set; }
     public Textbook Textbook { get; set; }
 
     [Required(ErrorMessage = "Genre is required")]
-    public int? Genre_ID { get; set; }
+    public int? Genre_Id { get; set; }
     public Genre Genre { get; set; }
 
     [Column(TypeName = "decimal(10,2)")] [Range(0.01, 10000, ErrorMessage = "Price must be between 0.01 and 10000")]

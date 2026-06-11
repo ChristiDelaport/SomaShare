@@ -3,6 +3,10 @@
 @using SomaShare.Components.Model
 @using SomaShare.Services
 @using Microsoft.AspNetCore.Components
+@using Microsoft.EntityFrameworkCore
+@inject IJSRuntime JS
+
+@inject SomaContext Context
 
 @inject IListingService ListingService
 @inject NavigationManager NavManager
@@ -13,9 +17,7 @@
 <div>
    <h2>My Listings</h2>
 </div>
-<div>
-  <button @onclick="CreateNewListing"> Create New Listing </button>
-</div>
+<br />
 
     @if (!string.IsNullOrEmpty(errorMessage))
     {
@@ -103,7 +105,7 @@
                             </div>
 
                             <div >
-                                <h4 >$@listing.Price.ToString("F2")</h4>
+                                <h4 >R @listing.Price.ToString("F2")</h4>
                             </div>
 
                             @if (listing.Offers != null && listing.Offers.Count > 0)
@@ -126,17 +128,17 @@
                                     }
                                 </p>
                             }
-                        </div>
+                            <div >
 
-                   
-                   <div >
-                     <button @onclick="() => EditListing(listing.ListingAd_ID)"> Edit </button>
-                      <button @onclick="() => DeleteListing(listing.ListingAd_ID)"> Delete </button>
-                       @if (listing.Offers != null && listing.Offers.Count > 0)
-                         {
-                           <button @onclick="() => ViewOffers(listing.ListingAd_ID)"> Offers </button>
-                         }
-                     </div>
+                               <button @onclick="() => EditListing(listing.ListingAd_Id)"> Edit </button>
+                               <button @onclick="() => DeleteListing(listing.ListingAd_Id)"> Delete </button>
+                               @if (listing.Offers != null && listing.Offers.Count > 0)
+                               {
+                                   <button @onclick="() => ViewOffers(listing.ListingAd_Id)"> Offers </button>
+                               }
+                               </div>
+                 
+                        </div>
                  
               </div>
        
@@ -187,11 +189,11 @@
         try
         {
             // Check if user is logged in
-            if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 2 && session.CurrentUserRoleId != 1) // Ensure user is a seller or Admin
-            {
-                NavManager.NavigateTo("/");
-                return;
-            }
+           // if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 2 && session.CurrentUserRoleId != 1) // Ensure user is a seller or Admin
+           // {
+          //      NavManager.NavigateTo("/", forceLoad: true);
+           //     return;
+            // }
 
             // Load user's listings
             await LoadListings();
@@ -206,15 +208,39 @@
         }
     }
 
+    
     private async Task LoadListings()
     {
-        try
+        // CHANGE - makes sure the CurrentUser in session has all the user information.
+        if (session.CurrentUser == null && !string.IsNullOrEmpty(session.User_Id))
         {
-            listings = await ListingService.GetUserListingsAsync(session.CurrentUser.Id);
+            try
+            {
+                var user = await Context.Users.FirstOrDefaultAsync(u => u.Id == session.User_Id);
+                if (user != null)
+                {
+                    session.CurrentUser = user;
+                    session.CurrentUserId = user.User_Id;
+                    session.CurrentUserRoleId = user.Role_Id;
+                }
+            }
+            catch
+            {
+                // ignore DB errors;
+            }
         }
-        catch (Exception ex)
+
+        var userId = session.CurrentUser?.Id ?? session.User_Id ?? string.Empty;
+        if (!string.IsNullOrEmpty(userId))
         {
-            errorMessage = $"Error retrieving listings: {ex.Message}";
+            try
+            {
+                listings = await ListingService.GetUserListingsAsync(userId);
+            }
+            catch
+            {
+                // ignore load errors
+            }
         }
     }
 
@@ -225,7 +251,7 @@
 
     private void EditListing(int listingId)
     {
-        NavManager.NavigateTo($"/edit-listing/{listingId}");
+        NavManager.NavigateTo($"/edit-listings/{listingId}");
     }
 
     private void ViewOffers(int listingId)

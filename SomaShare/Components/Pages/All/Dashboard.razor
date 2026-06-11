@@ -1,4 +1,5 @@
 ﻿@page "/dashboard"
+@rendermode InteractiveServer
 @using SomaShare.Services
 @using SomaShare.Components.Model
 
@@ -13,24 +14,24 @@
 
 <h3>Dashboard</h3>
 
+<div class ="dashboard">
 
 <!-- Create Listing -->
-<div class="card p-3 mb-4">
+<div class="card">
     <h4>Manage Listing</h4>
-    <button onclick="GoToManageListing"> Create Listing </button>
-</div>
-
-<!-- Create Wanted Ad -->
+    <button @onclick="GoToListings"> Manage Listing </button> 
 <div class="card">
     <h4>Create a Wanted Ad</h4>
-    <button onclick="GoToCreateWant"> Create Advertisement </button>
+    <button @onclick="GoToWants"> Manage Advertisement </button>
 </div>
+<br />
 
 <!-- Trust Score -->
 <div class="card">
     <h4>Community Trust</h4>
     <p>Your average rating: @averageRating</p>
 </div>
+    <br />
 
 <!-- Pending Transactions -->
 <div class="card">
@@ -42,7 +43,8 @@
         }
     </ul>
 </div>
-
+</div>
+</div>
 @code {
 
     private double averageRating;
@@ -58,12 +60,12 @@
         pendingTransactions = await TransactionService.GetPendingTransactionsAsync(UserSession.UserId);
     }
 
-    private async Task GoToCreateListing()
+    private async Task GoToListings()
     {
         NavManager.NavigateTo("/listings");
     }
 
-    private async Task GoToCreateWant()
+    private async Task GoToWants()
     {
         NavManager.NavigateTo("/wants");
     }

@@ -1,5 +1,142 @@
-﻿<h3>Profile</h3>
+﻿@page "/profile"
+@rendermode InteractiveServer
+@inject SomaShare.Components.Model.UserSession Session
+@inject SomaShare.Components.Model.SomaContext Context
+@inject IReviewService ReviewService
+@inject IJSRuntime JS
+@using Microsoft.EntityFrameworkCore
+@using SomaShare.Services
+@using Microsoft.AspNetCore.Identity
+
+<h3>Profile</h3>
+
+<div class="card" style="max-width:420px;">
+    <div class="card-body">
+        @if (loading)
+        {
+            <p>Loading profile...</p>
+        }
+        else
+        {
+            <div class="card-profile">
+            <h4>@displayName</h4>
+             <div>
+                 <p><strong>Email:</strong> @email</p>
+                 <p><strong>Role:</strong> @role</p>
+                 <p><strong>Score:</strong> @scoreDisplay</p>
+             </div>
+            </div>
+        }
+    </div>
+</div>
+
+
+
 
 @code {
+   
 
+    private bool loading = true;
+    private string email = string.Empty;
+    private string role = string.Empty;
+    private string displayName = "User";
+    private string scoreDisplay = "N/A";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Restore identity id from browser sessionStorage if missing
+            if (string.IsNullOrEmpty(Session.User_Id))
+            {
+                try
+                {
+                    var stored = await JS.InvokeAsync<string>("sessionStorage.getItem", "User_Id");
+                    if (!string.IsNullOrEmpty(stored)) Session.User_Id = stored;
+                }
+                catch
+                {
+                    // ignore JS errors
+                }
+            }
+
+            // If CurrentUser is not set but we have stored id, try to load from DB
+            if (Session.CurrentUser == null && !string.IsNullOrEmpty(Session.User_Id))
+            {
+                try
+                {
+                    var user = await Context.Users.Where(u => u.Id == Session.User_Id).FirstOrDefaultAsync();
+                    if (user != null)
+                    {
+                        Session.CurrentUser = user;
+                        Session.CurrentUserId = user.User_Id;
+                        // keep existing role id if any
+                    }
+                }
+                catch
+                {
+                    // ignore DB errors
+                }
+            }
+
+            var userId = Session.CurrentUser?.Id ?? Session.User_Id ?? string.Empty;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                email = Session.CurrentUser?.Email ?? string.Empty;
+                role = GetRoleNameFromIdOrFallback();
+                displayName = (Session.CurrentUser != null) ? $"{Session.CurrentUser.First_Name} {Session.CurrentUser.Last_Name}" : "User";
+
+                try
+                {
+                    var score = await ReviewService.GetAverageRatingAsync(userId);
+                    scoreDisplay = score > 0 ? score.ToString("F2") : "No reviews";
+                }
+                catch
+                {
+                    scoreDisplay = "N/A";
+                }
+            }
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private string GetRoleNameFromIdOrFallback()
+    {
+        if (Session != null)
+        {
+            var t = Session.GetType();
+
+            // try to read a role id property if it exists
+            var idProp = t.GetProperty("CurrentUserRoleId");
+            if (idProp != null)
+            {
+                var idVal = idProp.GetValue(Session)?.ToString();
+                if (!string.IsNullOrWhiteSpace(idVal) && int.TryParse(idVal, out var id))
+                {
+                    return id switch
+                    {
+                        1 => "Admin",
+                        2 => "Seller",
+                        3 => "Buyer",
+                        _ => "Seller"
+                    };
+                }
+            }
+
+            // fall back to an explicit role name property if present
+            var roleProp = t.GetProperty("CurrentUserRole");
+            if (roleProp != null)
+            {
+                var roleVal = roleProp.GetValue(Session)?.ToString();
+                if (!string.IsNullOrWhiteSpace(roleVal))
+                    return roleVal;
+            }
+        }
+
+        // final default
+        return "Seller";
+    }
 }

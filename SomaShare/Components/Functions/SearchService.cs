@@ -107,7 +107,7 @@ namespace SomaShare.Services
             // Filter by genre
             if (searchParams.GenreId.HasValue)
             {
-                query = query.Where(l => l.Genre_ID == searchParams.GenreId.Value);
+                query = query.Where(l => l.Genre_Id == searchParams.GenreId.Value);
             }
 
             // Apply sorting
@@ -169,7 +169,7 @@ namespace SomaShare.Services
             // Filter by genre
             if (searchParams.GenreId.HasValue)
             {
-                query = query.Where(w => w.Genre_ID == searchParams.GenreId.Value);
+                query = query.Where(w => w.Genre_Id == searchParams.GenreId.Value);
             }
 
             // Apply sorting
@@ -196,7 +196,7 @@ namespace SomaShare.Services
         {
             var query = _context.ListingAds
                 .AsNoTracking()
-                .Where(l => l.User_ID == userId)
+                .Where(l => l.User_Id == userId)
                 .Include(l => l.Textbook)
                 .Include(l => l.Genre)
                 .Include(l => l.Offers)
@@ -223,7 +223,7 @@ namespace SomaShare.Services
         {
             var query = _context.Offers
                 .AsNoTracking()
-                .Where(o => o.Seller_ID == sellerId)
+                .Where(o => o.Seller_Id == sellerId)
                 .Include(o => o.Buyer)
                 .Include(o => o.ListingAd)
                     .ThenInclude(l => l.Textbook)
@@ -249,7 +249,7 @@ namespace SomaShare.Services
         {
             var query = _context.Offers
                 .AsNoTracking()
-                .Where(o => o.Buyer_ID == buyerId)
+                .Where(o => o.Buyer_Id == buyerId)
                 .Include(o => o.Seller)
                 .Include(o => o.ListingAd)
                     .ThenInclude(l => l.Textbook)
@@ -314,7 +314,7 @@ namespace SomaShare.Services
         {
             var query = _context.Reviews
                 .AsNoTracking()
-                .Where(r => r.Reviewee_ID == userId)
+                .Where(r => r.Reviewee_Id == userId)
                 .Include(r => r.Reviewer)
                 .Include(r => r.Transaction)
                 .OrderByDescending(r => r.Date_Created);
@@ -340,7 +340,7 @@ namespace SomaShare.Services
         {
             var query = _context.Reviews
                 .AsNoTracking()
-                .Where(r => r.Reviewer_ID == userId)
+                .Where(r => r.Reviewer_Id == userId)
                 .Include(r => r.Reviewee)
                 .Include(r => r.Transaction)
                 .OrderByDescending(r => r.Date_Created);
@@ -364,13 +364,13 @@ namespace SomaShare.Services
         public async Task<DashboardSummary> GetDashboardSummaryAsync(string userId)
         {
             var myListingsCount = await _context.ListingAds
-                .CountAsync(l => l.User_ID == userId && l.IsActive);
+                .CountAsync(l => l.User_Id == userId && l.IsActive);
 
             var receivedOffersCount = await _context.Offers
-                .CountAsync(o => o.Seller_ID == userId && o.Status == "Pending");
+                .CountAsync(o => o.Seller_Id == userId && o.Status == "Pending");
 
             var madeOffersCount = await _context.Offers
-                .CountAsync(o => o.Buyer_ID == userId && o.Status == "Pending");
+                .CountAsync(o => o.Buyer_Id == userId && o.Status == "Pending");
 
             var transactionsCount = await _context.Transactions
                 .CountAsync(t => (t.Buyer_Id == userId || t.Seller_Id == userId) && t.Status == "Pending");
@@ -379,10 +379,10 @@ namespace SomaShare.Services
                 .CountAsync(t => (t.Buyer_Id == userId || t.Seller_Id == userId) && t.Status == "Completed");
 
             var reviewsReceivedCount = await _context.Reviews
-                .CountAsync(r => r.Reviewee_ID == userId);
+                .CountAsync(r => r.Reviewee_Id == userId);
 
             var averageRating = await _context.Reviews
-                .Where(r => r.Reviewee_ID == userId)
+                .Where(r => r.Reviewee_Id == userId)
                 .AverageAsync(r => (double?)r.Rating) ?? 0;
 
             return new DashboardSummary

@@ -6,18 +6,18 @@ namespace SomaShare.Components.Model
     public class Offer
     {
         [Key]
-        public int Offer_ID { get; set; }
+        public int Offer_Id { get; set; }
 
         [Required(ErrorMessage = "Listing is required")]
-        public int ListingAd_ID { get; set; }
+        public int ListingAd_Id { get; set; }
         public ListingAd ListingAd { get; set; }
 
         [Required(ErrorMessage = "Buyer is required")]
-        public string Buyer_ID { get; set; }
+        public string Buyer_Id { get; set; }
         public User Buyer { get; set; }
 
         [Required(ErrorMessage = "Seller is required")]
-        public string Seller_ID { get; set; }
+        public string Seller_Id { get; set; }
         public User Seller { get; set; }
 
         [Required(ErrorMessage = "Offer price is required")][Range(0.01, 10000, ErrorMessage = "Offer price must be between 0.01 and 10000")]
@@ -34,7 +34,7 @@ namespace SomaShare.Components.Model
         [Required] [StringLength(20)]
         public string Status { get; set; } = "Pending"; // Pending, Accepted, Rejected, Expired
 
-        public int? Transaction_ID { get; set; }
+        public int? Transaction_Id { get; set; }
         public Transaction? Transaction { get; set; }
 
     }

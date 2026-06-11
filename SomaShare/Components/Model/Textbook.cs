@@ -6,7 +6,7 @@ namespace SomaShare.Components.Model
     public class Textbook
     {
         [Key]
-        public int Textbook_ID { get; set; }
+        public int Textbook_Id { get; set; }
 
         [Required(ErrorMessage = "Title is required")]
         [StringLength(200, ErrorMessage = "Do not exceed 200 characters")]
@@ -26,7 +26,7 @@ namespace SomaShare.Components.Model
         public string? Description { get; set; }
 
         [Required(ErrorMessage = "Genre is required")]
-        public int Genre_ID { get; set; }
+        public int Genre_Id { get; set; }
         public Genre Genre { get; set; }
 
         // Navigation properties

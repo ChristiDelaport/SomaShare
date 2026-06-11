@@ -5,7 +5,7 @@ namespace SomaShare.Components.Model
 {
     public class User : IdentityUser
     {
-        [Required]
+        [Key]
         public int User_Id { get; set; }
         [Required]
         public string First_Name { get; set; }
@@ -19,7 +19,7 @@ namespace SomaShare.Components.Model
         [Required]
         public string Email { get; set; }
 
-        public int Role_ID { get; set; }
+        public int Role_Id { get; set; }
 
 
         [Required]

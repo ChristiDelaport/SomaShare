@@ -77,11 +77,11 @@
 
                         <div>
                             <label>Genre </label>
-                            <select id="genre" @bind="wantedAd.Genre_ID" required>
+                            <select id="genre" @bind="wantedAd.Genre_Id" required>
                                 <option value="">-- Select a Genre --</option>
                                 @foreach (var genre in genres)
                                 {
-                                    <option value="@genre.Genre_ID">@genre.Genre_Name</option>
+                                    <option value="@genre.Genre_Id">@genre.Genre_Name</option>
                                 }
                             </select>
                         </div>
@@ -144,11 +144,11 @@
         try
         {
             // Check if user is logged in
-            if (session?.CurrentUser == null)
-            {
-                NavManager.NavigateTo("/dashboard");
-                return;
-            }
+            //if (session?.CurrentUser == null)
+           // {
+            //    NavManager.NavigateTo("/dashboard");
+             //   return;
+            //}
 
             // Load genres from database
             genres = await Context.Genres.ToListAsync();
@@ -157,7 +157,7 @@
             wantedAd = await WantedAdService.GetWantedAdAsync(WantedAdId);
 
             // Verify ownership
-            if (wantedAd == null || wantedAd.User_ID != session.CurrentUser.Id)
+            if (wantedAd == null || wantedAd.User_Id != session.CurrentUser.Id)
             {
                 wantedAd = null;
             }
@@ -193,7 +193,7 @@
                 return;
             }
 
-            if (wantedAd.Genre_ID == 0 || wantedAd.Genre_ID == null)
+            if (wantedAd.Genre_Id == 0 || wantedAd.Genre_Id == null)
             {
                 errorMessage = "Please select a genre";
                 return;
@@ -206,7 +206,7 @@
             }
 
             // Update Date_Updated
-            wantedAd.Date_Updated = DateTime.UtcNow;
+            wantedAd.Date_Updated = DateTime.Now;
 
             // Update wanted ad via service
             await WantedAdService.UpdateWantedAdAsync(wantedAd);

@@ -8,7 +8,8 @@
 @inject IWantedAdService WantedAdService
 @inject SomaContext Context
 @inject NavigationManager NavManager
-@inject UserSession session
+@inject SomaShare.Components.Model.UserSession session
+@inject IJSRuntime JS
 
 <PageTitle>Create Want Ad - SomaShare</PageTitle>
 
@@ -37,58 +38,48 @@
 
         <form @onsubmit="SubmitForm">
           <h5 >Textbook Information</h5>
-          <div >
-            <div >
+          <div  class="form">
+            <div>
               <label for="title" >Title *</label>
-              <input type="text" id="title" placeholder="Enter textbook title" @bind="textbook.Title" required />
+                <input type="text" id="title" placeholder="Enter textbook title" @bind="textbook.Title" required /> <br />
              </div>
               <div>
                <label for="author" >Author *</label>
-               <input type="text" id="author" placeholder="Enter author name" @bind="textbook.Author" required />
+                <input type="text" id="author" placeholder="Enter author name" @bind="textbook.Author" required /> <br />
              </div>
-          </div>
 
-          <div>
-            <div >
               <label for="isbn" >ISBN</label>
-              <input type="text" id="isbn" placeholder="Enter ISBN (optional)" @bind="textbook.ISBN" />
-             </div>
-            <div>
-              <label for="version">Edition/Version</label>
-              <input type="text"  id="version" placeholder="e.g., 3rd Edition (optional)" @bind="textbook.Version" />
-            </div>
-          </div>
+            <input type="text" id="isbn" placeholder="Enter ISBN (optional)" @bind="textbook.ISBN" /> <br />
 
-          <div>
+              <label for="version">Edition/Version</label>
+              <input type="text"  id="version" placeholder="e.g., 3rd Edition (optional)" @bind="textbook.Version" /> <br />
+
+
             <label for="genre">Genre *</label>
-            <select id="genre" @bind="textbook.Genre_ID" required>
+            <select id="genre" @bind="textbook.Genre_Id" required>
               <option value="">-- Select a Genre --</option>
               @foreach (var genre in genres)
                {
-                <option value="@genre.Genre_ID">@genre.Genre_Name</option>
+                <option value="@genre.Genre_Id">@genre.Genre_Name</option>
                }
-             </select>
-          </div>
-
-          <div>
+             </select> <br />
+          
             <label for="description" >Description</label>
             <textarea id="description" rows="3" placeholder="What specific edition or condition are you looking for?" @bind="textbook.Description"></textarea>
-          </div>
 
+          </div>
             <h5>Want Ad Details</h5>
-          <div>
-            <label for="maxPrice" >Maximum Price You're Willing to Pay ($)</label>
+           <label for="maxPrice" >Maximum Price You're Willing to Pay (R)</label>
             <input type="number" id="maxPrice" placeholder="0.00" step="0.01" min="0.01" max="10000" @bind="wantedAd.MaxPrice" />
-          </div>
 
-          <div >
-            <button type="button" @onclick="Cancel">Cancel</button>
-            <button type="submit"  disabled="@isSubmitting"> Post Want Ad </button>
-          </div>
+            <button type="button" class="btn btn-primary"  @onclick="Cancel">Cancel</button>
+            <button type="submit" class="btn btn-primary" disabled="@isSubmitting"> Post Want Ad </button>
+         
         </form>
      </div>
 
 @code {
+    private List<WantedAd> wantedAds;
     private Textbook textbook = new();
     private WantedAd wantedAd = new();
     private List<Genre> genres = new();
@@ -100,11 +91,11 @@
     protected override async Task OnInitializedAsync()
     {
         // Check if user is logged in and is a buyer
-        if (session?.CurrentUser == null || !session.IsBuyer)
-        {
-            NavManager.NavigateTo("/dashboard");
-            return;
-        }
+        //if (session?.CurrentUser == null || !session.IsBuyer)
+       // {
+        //    NavManager.NavigateTo("/dashboard");
+        //    return;
+       // }
 
         // Load genres from database
         genres = await Context.Genres.ToListAsync();
@@ -114,6 +105,55 @@
     {
         try
         {
+            // Try to read stored Identity user id from browser sessionStorage if session doesn't have it yet CHANGE
+            if (string.IsNullOrEmpty(session.User_Id))
+            {
+                try
+                {
+                    var stored = await JS.InvokeAsync<string>("sessionStorage.getItem", "User_Id");
+                    if (!string.IsNullOrEmpty(stored))
+                    {
+                        session.User_Id = stored;
+                    }
+                }
+                catch
+                {
+                    // ignore JS errors
+                }
+            }
+
+            if (session.CurrentUser == null && !string.IsNullOrEmpty(session.User_Id))
+            {
+                try
+                {
+                    var user = await Context.Users.FirstOrDefaultAsync(u => u.Id == session.User_Id);
+                    if (user != null)
+                    {
+                        session.CurrentUser = user;
+                        session.CurrentUserId = user.User_Id;
+                        session.CurrentUserRoleId = user.Role_Id;
+                    }
+                }
+                catch
+                {
+                    // ignore DB errors; we'll fall back to using stored id
+                }
+            }
+
+            var userId = session.CurrentUser?.Id ?? session.User_Id ?? string.Empty;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                try
+                {
+                    wantedAds = await WantedAdService.GetUserWantedAdsAsync(userId);
+                }
+                catch
+                {
+                    // ignore load errors
+                }
+            }
+
+
             isSubmitting = true;
             errorMessage = string.Empty;
             successMessage = string.Empty;
@@ -131,16 +171,16 @@
                 return;
             }
 
-            if (textbook.Genre_ID == 0)
+            if (textbook.Genre_Id == 0)
             {
                 errorMessage = "Please select a genre";
                 return;
             }
 
             // Set want ad properties
-            wantedAd.User_ID = session.CurrentUser.Id;
-            wantedAd.Genre_ID = textbook.Genre_ID;
-            wantedAd.Date_Posted = DateTime.UtcNow;
+            wantedAd.User_Id = userId;
+            wantedAd.Genre_Id = textbook.Genre_Id;
+            wantedAd.Date_Posted = DateTime.Now;
             wantedAd.IsActive = true;
 
             // Create want ad via service
@@ -148,7 +188,7 @@
 
             successMessage = "Want ad posted successfully!";
             await Task.Delay(1500);
-            NavManager.NavigateTo("/managewants");
+            NavManager.NavigateTo("/wants",forceLoad: true);
         }
         catch (Exception ex)
         {
@@ -162,6 +202,6 @@
 
     private void Cancel()
     {
-        NavManager.NavigateTo("/managewants");
+        NavManager.NavigateTo("/wants", forceLoad: true);
     }
 }

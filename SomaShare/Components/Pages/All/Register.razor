@@ -7,9 +7,6 @@
 @inject NavigationManager NavManager
 
 
-
-
-
 <h3>Register</h3>
 
 
@@ -51,7 +48,8 @@
     string password;
     string message;
 
-    int roleId = 1;
+
+    int roleId;
 
     private async Task RegisterUser()
     {
@@ -62,15 +60,19 @@
             return;
         }
 
+        // CHANGE -  ID is generated as a random number string
+        var generatedId = await GenerateUniqueNumericIdAsync();
+
         var user = new User
-        {
-            First_Name = firstName,
-            Last_Name = lastName,
-            Email = email,
-            Password = password,
-            Role_ID = roleId,
-            EnrollmentDate = DateTime.Now
-        };
+            {
+                Id = generatedId,
+                First_Name = firstName,
+                Last_Name = lastName,
+                Email = email,
+                Password = password,
+                Role_Id = roleId,
+                EnrollmentDate = DateTime.Now
+            };
 
         await context.Users.AddAsync(user);
         await context.SaveChangesAsync();
@@ -78,11 +80,38 @@
         message = "Registration successful!";
 
         // redirect to login
-        NavManager.NavigateTo("/");
+        NavManager.NavigateTo("/", forceLoad: true);
     }
 
     private void GoToLogIn()
     {
-        NavManager.NavigateTo("/");
+        NavManager.NavigateTo("/", forceLoad: true);
+    }
+    //CHANGE - generates a random asortment of numbers for the user id and checks against the database to ensure it's unique.
+    private async Task<string> GenerateUniqueNumericIdAsync(int length = 20)
+    {
+        while (true)
+        {
+            var id = GenerateNumericString(length);
+            var existing = await UserManager.FindByIdAsync(id);
+            if (existing == null) return id;
+        }
+    }
+
+    private static string GenerateNumericString(int length)
+    {
+        var bytes = new byte[length];
+        using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+        {
+            rng.GetBytes(bytes);
+        }
+
+        var sb = new System.Text.StringBuilder(length);
+        foreach (var b in bytes)
+        {
+            sb.Append((b % 10).ToString());
+        }
+
+        return sb.ToString();
     }
 }
