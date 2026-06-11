@@ -26,7 +26,7 @@ namespace SomaShare.Services
         public async Task<List<ListingAd>> GetUserListingsAsync(string userId)
         {
             return await _context.ListingAds
-                .Where(l => l.User_ID == userId)
+                .Where(l => l.User_Id == userId)
                 .Include(l => l.Textbook)
                 .Include(l => l.Offers)
                 .OrderByDescending(l => l.Date_Posted)
@@ -39,7 +39,7 @@ namespace SomaShare.Services
                 .Include(l => l.Textbook)
                 .Include(l => l.User)
                 .Include(l => l.Genre)
-                .FirstOrDefaultAsync(l => l.ListingAd_ID == listingId);
+                .FirstOrDefaultAsync(l => l.ListingAd_Id == listingId);
         }
 
         public async Task<ListingAd> CreateListingAsync(Textbook textbook, ListingAd listing)
@@ -47,7 +47,7 @@ namespace SomaShare.Services
             await _context.Textbooks.AddAsync(textbook);
             await _context.SaveChangesAsync();
 
-            listing.Textbook_ID = textbook.Textbook_ID;
+            listing.Textbook_Id = textbook.Textbook_Id;
             await _context.ListingAds.AddAsync(listing);
             await _context.SaveChangesAsync();
 
@@ -78,7 +78,7 @@ namespace SomaShare.Services
         public async Task<List<ListingAd>> GetActiveBrowseableListingsAsync(string excludeUserId)
         {
             return await _context.ListingAds
-                .Where(l => l.IsActive && l.User_ID != excludeUserId)
+                .Where(l => l.IsActive && l.User_Id != excludeUserId)
                 .Include(l => l.Textbook)
                 .Include(l => l.User)
                 .Include(l => l.Genre)
@@ -89,7 +89,7 @@ namespace SomaShare.Services
         public async Task<List<ListingAd>> GetFilteredListingsAsync(string? searchTitle, string? genreId, string excludeUserId)
         {
             var query = _context.ListingAds
-                .Where(l => l.IsActive && l.User_ID != excludeUserId)
+                .Where(l => l.IsActive && l.User_Id != excludeUserId)
                 .Include(l => l.Textbook)
                 .Include(l => l.User)
                 .Include(l => l.Genre)
@@ -102,7 +102,7 @@ namespace SomaShare.Services
 
             if (!string.IsNullOrEmpty(genreId) && int.TryParse(genreId, out int genreIdInt))
             {
-                query = query.Where(l => l.Genre_ID == genreIdInt);
+                query = query.Where(l => l.Genre_Id == genreIdInt);
             }
 
             return await query.OrderByDescending(l => l.Date_Posted).ToListAsync();

@@ -110,11 +110,11 @@
                                    </div>
 
                                   <div>
-                                      <button @onclick="() => AcceptOffer(offer.Offer_ID)" disabled="@(processingOfferId == offer.Offer_ID)">
+                                      <button @onclick="() => AcceptOffer(offer.Offer_Id)" disabled="@(processingOfferId == offer.Offer_Id)">
                                            <p>Accept Offer</p>
                                             </button>
 
-                                      <button @onclick="() => RejectOffer(offer.Offer_ID)" disabled="@(processingOfferId == offer.Offer_ID)">
+                                      <button @onclick="() => RejectOffer(offer.Offer_Id)" disabled="@(processingOfferId == offer.Offer_Id)">
                                          <span>Reject Offer</span>
                                             </button>
                                         </div>
@@ -192,17 +192,17 @@
         try
         {
             // Check if user is logged in
-            if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 2 && session.CurrentUserRoleId != 1) // Ensure user is a seller or Admin
-            {
-                NavManager.NavigateTo("/");
-                return;
-            }
+           // if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 2 && session.CurrentUserRoleId != 1) // Ensure user is a seller or Admin
+           // {
+           //     NavManager.NavigateTo("/", forceLoad: true);
+           //     return;
+           // }
 
             // Load listing
             listing = await ListingService.GetListingAsync(ListingId);
 
             // Verify ownership
-            if (listing == null || listing.User_ID != session.CurrentUser.Id)
+            if (listing == null || listing.User_Id != session.CurrentUser.Id)
             {
                 errorMessage = "Listing not found or you don't have permission to view it.";
                 loading = false;
@@ -243,7 +243,7 @@
             errorMessage = string.Empty;
             successMessage = string.Empty;
 
-            var offer = offers.FirstOrDefault(o => o.Offer_ID == offerId);
+            var offer = offers.FirstOrDefault(o => o.Offer_Id == offerId);
             if (offer == null)
             {
                 errorMessage = "Offer not found";
@@ -251,10 +251,10 @@
             }
 
             // Reject all other pending offers for this listing
-            var otherPendingOffers = offers.Where(o => o.Status == "Pending" && o.Offer_ID != offerId).ToList();
+            var otherPendingOffers = offers.Where(o => o.Status == "Pending" && o.Offer_Id != offerId).ToList();
             foreach (var otherOffer in otherPendingOffers)
             {
-                await OfferService.UpdateOfferStatusAsync(otherOffer.Offer_ID, "Rejected");
+                await OfferService.UpdateOfferStatusAsync(otherOffer.Offer_Id, "Rejected");
             }
 
             // Accept this offer
@@ -264,8 +264,8 @@
             var transaction = new Transaction
             {
                 Offer_Id = offerId,
-                Buyer_Id = offer.Buyer_ID,
-                Seller_Id = offer.Seller_ID,
+                Buyer_Id = offer.Buyer_Id,
+                Seller_Id = offer.Seller_Id,
                 Transaction_Amount = offer.OfferedPrice,
                 Payment_Method = "To Be Arranged",
                 Status = "Pending"

@@ -32,13 +32,13 @@ namespace SomaShare.Services
                 .Include(r => r.Transaction)
                 .Include(r => r.Reviewer)
                 .Include(r => r.Reviewee)
-                .FirstOrDefaultAsync(r => r.Review_ID == reviewId);
+                .FirstOrDefaultAsync(r => r.Review_Id == reviewId);
         }
 
         public async Task<List<Review>> GetReviewsForUserAsync(string userId)
         {
             return await _context.Reviews
-                .Where(r => r.Reviewee_ID == userId)
+                .Where(r => r.Reviewee_Id == userId)
                 .Include(r => r.Reviewer)
                 .Include(r => r.Transaction)
                 .OrderByDescending(r => r.Date_Created)
@@ -48,7 +48,7 @@ namespace SomaShare.Services
         public async Task<List<Review>> GetReviewsByReviewerAsync(string reviewerId)
         {
             return await _context.Reviews
-                .Where(r => r.Reviewer_ID == reviewerId)
+                .Where(r => r.Reviewer_Id == reviewerId)
                 .Include(r => r.Reviewee)
                 .Include(r => r.Transaction)
                 .OrderByDescending(r => r.Date_Created)
@@ -57,7 +57,7 @@ namespace SomaShare.Services
 
         public async Task<Review> CreateReviewAsync(Review review)
         {
-            review.Date_Created = DateTime.UtcNow;
+            review.Date_Created = DateTime.Now;
             await _context.Reviews.AddAsync(review);
             await _context.SaveChangesAsync();
             return review;
@@ -83,13 +83,13 @@ namespace SomaShare.Services
         public async Task<bool> UserHasReviewedTransactionAsync(int transactionId, string reviewerId)
         {
             return await _context.Reviews
-                .AnyAsync(r => r.Transaction_ID == transactionId && r.Reviewer_ID == reviewerId);
+                .AnyAsync(r => r.Transaction_Id == transactionId && r.Reviewer_Id == reviewerId);
         }
 
         public async Task<decimal> GetUserAverageRatingAsync(string userId)
         {
             var reviews = await _context.Reviews
-                .Where(r => r.Reviewee_ID == userId)
+                .Where(r => r.Reviewee_Id == userId)
                 .ToListAsync();
 
             if (reviews.Count == 0)
@@ -101,7 +101,7 @@ namespace SomaShare.Services
         public async Task<double> GetAverageRatingAsync(string userId)
         {
             var reviews = await _context.Reviews
-                .Where(r => r.Reviewee_ID == userId)
+                .Where(r => r.Reviewee_Id == userId)
                 .ToListAsync();
 
             if (reviews.Count == 0)

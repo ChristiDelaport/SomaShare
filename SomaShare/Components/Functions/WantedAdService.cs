@@ -26,7 +26,7 @@ namespace SomaShare.Services
         public async Task<List<WantedAd>> GetUserWantedAdsAsync(string userId)
         {
             return await _context.WantedAds
-                .Where(w => w.User_ID == userId)
+                .Where(w => w.User_Id == userId)
                 .Include(w => w.Textbook)
                 .Include(w => w.Genre)
                 .OrderByDescending(w => w.Date_Posted)
@@ -39,7 +39,7 @@ namespace SomaShare.Services
                 .Include(w => w.Textbook)
                 .Include(w => w.User)
                 .Include(w => w.Genre)
-                .FirstOrDefaultAsync(w => w.WantedAd_ID == wantedAdId);
+                .FirstOrDefaultAsync(w => w.WantedAd_Id == wantedAdId);
         }
 
         public async Task<WantedAd> CreateWantedAdAsync(Textbook textbook, WantedAd wantedAd)
@@ -47,7 +47,7 @@ namespace SomaShare.Services
             await _context.Textbooks.AddAsync(textbook);
             await _context.SaveChangesAsync();
 
-            wantedAd.Textbook_ID = textbook.Textbook_ID;
+            wantedAd.Textbook_Id = textbook.Textbook_Id;
             await _context.WantedAds.AddAsync(wantedAd);
             await _context.SaveChangesAsync();
 
@@ -78,7 +78,7 @@ namespace SomaShare.Services
         public async Task<List<WantedAd>> GetActiveBrowseableWantedAdsAsync(string excludeUserId)
         {
             return await _context.WantedAds
-                .Where(w => w.IsActive && w.User_ID != excludeUserId)
+                .Where(w => w.IsActive && w.User_Id != excludeUserId)
                 .Include(w => w.Textbook)
                 .Include(w => w.User)
                 .Include(w => w.Genre)
@@ -89,7 +89,7 @@ namespace SomaShare.Services
         public async Task<List<WantedAd>> GetFilteredWantedAdsAsync(string? searchTitle, string? genreId, string excludeUserId)
         {
             var query = _context.WantedAds
-                .Where(w => w.IsActive && w.User_ID != excludeUserId);
+                .Where(w => w.IsActive && w.User_Id != excludeUserId);
 
             if (!string.IsNullOrWhiteSpace(searchTitle))
             {
@@ -98,7 +98,7 @@ namespace SomaShare.Services
 
             if (!string.IsNullOrWhiteSpace(genreId) && int.TryParse(genreId, out int genreIdInt))
             {
-                query = query.Where(w => w.Genre_ID == genreIdInt);
+                query = query.Where(w => w.Genre_Id == genreIdInt);
             }
 
             return await query

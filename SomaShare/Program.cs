@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SomaShare.Components;
 using SomaShare.Components.Model;
 using SomaShare.Services;
+using SomaShare.Components.Functions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +37,6 @@ builder.Services.AddScoped<IOfferService, OfferService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<ITransactionService, TransactionService>();
 builder.Services.AddScoped<RoleSeederService>();
-builder.Services.AddScoped<UserSession>();
 
 // Add SignalR for real-time communication (chat)
 builder.Services.AddSignalR();
@@ -52,9 +52,8 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<FormValidator>();
 
 // Service used to seed roles into the database
-builder.Services.AddScoped<RoleSeederService>();
-
-// Configure ASP.NET Identity (user management system)
+// RoleSeederService now also seeds initial app data (users, textbooks, listings, wanted ads)
+// CHANGE - configure Identity for the project (use default string-based keys). Using simple settings for a college project
 builder.Services.AddIdentity<User, IdentityRole>(options =>
 {
     // Password requirements
@@ -123,7 +122,7 @@ app.MapRazorComponents<App>()
 using (var scope = app.Services.CreateScope())
 {
     var roleSeeder = scope.ServiceProvider.GetRequiredService<RoleSeederService>();
-    await roleSeeder.SeedRolesAsync(); // Creates Admin, Seller, Buyer roles if they don't exist
+    await roleSeeder.SeedAsync(); // Seeds roles and initial app data (users, textbooks, listings, wanted ads)
 }
 
 app.Run();

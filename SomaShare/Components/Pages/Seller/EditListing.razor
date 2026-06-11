@@ -1,4 +1,4 @@
-﻿@page "/editlisting/{listingId:int}"
+﻿@page "/editlistings/{listingId:int}"
 @rendermode InteractiveServer
 @using SomaShare.Components.Model
 @using SomaShare.Services
@@ -77,11 +77,11 @@
 
                             <div>
                                 <label>Genre </label>
-                                <select id="genre" @bind="listing.Textbook.Genre_ID" required>
+                                <select id="genre" @bind="listing.Textbook.Genre_Id" required>
                                     <option value="">-- Select a Genre --</option>
                                     @foreach (var genre in genres)
                                     {
-                                        <option value="@genre.Genre_ID">@genre.Genre_Name</option>
+                                        <option value="@genre.Genre_Id">@genre.Genre_Name</option>
                                     }
                                 </select>
                             </div>
@@ -162,11 +162,11 @@
         try
         {
             // Check if user is logged in
-            if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 2 && session.CurrentUserRoleId != 1) // Ensure user is a seller or Admin
-            {
-                NavManager.NavigateTo("/");
-                return;
-            }
+            //if (session?.CurrentUserRoleId == null || session.CurrentUserRoleId != 2 && session.CurrentUserRoleId != 1) // Ensure user is a seller or Admin
+           // {
+           //     NavManager.NavigateTo("/", forceLoad: true);
+           //     return;
+           // }
 
             // Load genres from database
             genres = await Context.Genres.ToListAsync();
@@ -175,7 +175,7 @@
             listing = await ListingService.GetListingAsync(ListingId);
 
             // Verify ownership
-            if (listing == null || listing.User_ID != session.CurrentUser.Id)
+            if (listing == null || listing.User_Id != session.CurrentUser.Id)
             {
                 listing = null;
             }
@@ -211,7 +211,7 @@
                 return;
             }
 
-            if (listing.Textbook.Genre_ID == 0)
+            if (listing.Textbook.Genre_Id == 0)
             {
                 errorMessage = "Please select a genre";
                 return;
@@ -219,7 +219,7 @@
 
             if (listing.Price <= 0)
             {
-                errorMessage = "Price must be greater than $0.00";
+                errorMessage = "Price must be greater than R0.00";
                 return;
             }
 
@@ -230,7 +230,7 @@
             }
 
             // Update Date_Updated
-            listing.Date_Updated = DateTime.UtcNow;
+            listing.Date_Updated = DateTime.Now;
 
             // Update listing via service
             await ListingService.UpdateListingAsync(listing);
